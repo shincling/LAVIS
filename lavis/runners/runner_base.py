@@ -298,6 +298,7 @@ class RunnerBase:
     def valid_splits(self):
         valid_splits = self.config.run_cfg.get("valid_splits", [])
 
+        # import pdb; pdb.set_trace()
         if len(valid_splits) == 0:
             logging.info("No validation splits found.")
 
@@ -373,6 +374,7 @@ class RunnerBase:
                 self.log_stats(split_name="train", stats=train_stats)
 
             # evaluation phase
+            # import pdb; pdb.set_trace()
             if len(self.valid_splits) > 0:
                 for split_name in self.valid_splits:
                     logging.info("Evaluating on {}.".format(split_name))

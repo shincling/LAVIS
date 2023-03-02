@@ -184,6 +184,7 @@ class GQATask(VQATask):
         question_id = samples["question_id"]
         gt_answers = samples["answer"]
         
+        print("answers: ", answers)
         for answer, ques_id, gt_answer in zip(answers, question_id, gt_answers):
             ques_id = int(ques_id.item())
             pred_qa_pairs.append({"question_id": ques_id, "pred_ans": answer, "gt_ans": gt_answer})

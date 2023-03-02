@@ -107,6 +107,7 @@ class BaseDatasetBuilder:
 
         cache_root = registry.get_path("cache_root")
 
+        # import pdb; pdb.set_trace()
         for split in splits:
             info = anns[split]
 
@@ -122,7 +123,7 @@ class BaseDatasetBuilder:
             for url_or_filename, storage_path in zip(urls, storage_paths):
                 # if storage_path is relative, make it full by prefixing with cache_root.
                 if not os.path.isabs(storage_path):
-                    storage_path = os.path.join(cache_root, storage_path)
+                    storage_path = os.path.join(cache_root, storage_path) # '/export/home/.cache/lavis/coco/annotations/coco_karpathy_train.json'
 
                 dirname = os.path.dirname(storage_path)
                 if not os.path.exists(dirname):

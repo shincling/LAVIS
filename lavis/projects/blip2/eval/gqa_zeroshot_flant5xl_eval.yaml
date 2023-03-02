@@ -19,9 +19,9 @@ datasets:
     text_processor:
         eval:
           name: "blip_question"
-    build_info:
-        images:
-            storage: "/export/share/datasets/vision/GQA/images/"
+    # build_info:
+    #     images:
+    #         storage: "/export/share/datasets/vision/GQA/images/"
 
 run:
   task: gqa
@@ -42,6 +42,7 @@ run:
 
   evaluate: True
   test_splits: ["val"]
+  # test_splits: ["test"]
 
   # distribution-specific
   device: "cuda"

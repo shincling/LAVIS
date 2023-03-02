@@ -29,6 +29,7 @@ class BaseTask:
     def build_model(self, cfg):
         model_config = cfg.model_cfg
 
+        # import pdb; pdb.set_trace()
         model_cls = registry.get_model_class(model_config.arch)
         return model_cls.from_config(model_config)
 
@@ -175,8 +176,8 @@ class BaseTask:
             data_loader = iter(data_loader)
 
         metric_logger = MetricLogger(delimiter="  ")
-        metric_logger.add_meter("lr", SmoothedValue(window_size=1, fmt="{value:.6f}"))
-        metric_logger.add_meter("loss", SmoothedValue(window_size=1, fmt="{value:.4f}"))
+        metric_logger.add_meter("lr", SmoothedValue(window_size=1, fmt="{value:.9f}"))
+        metric_logger.add_meter("loss", SmoothedValue(window_size=1, fmt="{value:.6f}"))
 
         # if iter-based runner, schedule lr based on inner epoch.
         logging.info(
@@ -184,6 +185,8 @@ class BaseTask:
                 epoch, iters_per_epoch
             )
         )
+        print("Start training epoch {}, {} iters per inner epoch.".format(epoch, iters_per_epoch))
+
         header = "Train: data epoch: [{}]".format(epoch)
         if start_iters is None:
             # epoch-based runner
@@ -237,7 +240,7 @@ class BaseTask:
         metric_logger.synchronize_between_processes()
         logging.info("Averaged stats: " + str(metric_logger.global_avg()))
         return {
-            k: "{:.3f}".format(meter.global_avg)
+            k: "{:.8f}".format(meter.global_avg)
             for k, meter in metric_logger.meters.items()
         }
 

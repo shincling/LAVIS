@@ -10,6 +10,8 @@ from lavis.datasets.datasets.coco_caption_datasets import (
     COCOCapDataset,
     COCOCapEvalDataset,
     NoCapsEvalDataset,
+    MedCapDataset,
+    MedCapEvalDataset,
 )
 
 from lavis.common.registry import registry
@@ -18,6 +20,14 @@ from lavis.datasets.datasets.video_caption_datasets import (
     VideoCaptionEvalDataset,
 )
 
+@registry.register_builder("med_caption")
+class MedCapBuilder(BaseDatasetBuilder):
+    train_dataset_cls = MedCapDataset
+    eval_dataset_cls = MedCapEvalDataset
+
+    DATASET_CONFIG_DICT = {
+        "default": "configs/datasets/coco/defaults_med.yaml",
+    }
 
 @registry.register_builder("coco_caption")
 class COCOCapBuilder(BaseDatasetBuilder):

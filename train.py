@@ -78,7 +78,8 @@ def main():
     # set before init_distributed_mode() to ensure the same job_id shared across all ranks.
     job_id = now()
 
-    cfg = Config(parse_args())
+    args = parse_args()
+    cfg = Config(args)
 
     init_distributed_mode(cfg.run_cfg)
 

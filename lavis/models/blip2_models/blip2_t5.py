@@ -6,6 +6,8 @@
 """
 import logging
 
+import random
+import requests
 import torch
 import torch.nn as nn
 from torch.cuda.amp import autocast as autocast
@@ -15,6 +17,7 @@ from lavis.common.registry import registry
 from lavis.models.blip2_models.blip2 import Blip2Base, disabled_train
 from lavis.models.blip2_models.modeling_t5 import T5Config, T5ForConditionalGeneration
 
+translation_api_en2an_genel = 'http://172.18.30.134:6220/aliyuntranslate_en_gen/' 
 
 @registry.register_model("blip2_t5")
 class Blip2T5(Blip2Base):
@@ -114,16 +117,20 @@ class Blip2T5(Blip2Base):
         inputs_t5 = self.t5_proj(query_output.last_hidden_state)
         atts_t5 = torch.ones(inputs_t5.size()[:-1], dtype=torch.long).to(image.device)
 
+        # import pdb; pdb.set_trace()
+        # Todo(jing): hack the prompt in T5 encoder
         with torch.cuda.amp.autocast(dtype=torch.bfloat16):
             input_tokens = self.t5_tokenizer(
-                samples["text_input"],
+                # ["Question: What does this show? Answer:"] * len(samples["text_input"]),
+                [""] * len(samples["text_input"]),
                 padding="longest",
                 truncation=True,
                 max_length=self.max_txt_len,
                 return_tensors="pt",
             ).to(image.device)
             output_tokens = self.t5_tokenizer(
-                samples["text_output"],
+                samples["text_input"], # TODO(Jing): bug report, there is no text_output in samples, but text_input
+                # samples["text_output"],
                 padding="longest",
                 truncation=True,
                 max_length=self.max_txt_len,
@@ -146,6 +153,20 @@ class Blip2T5(Blip2Base):
                 return_dict=True,
                 labels=targets,
             )
+            print("*"*20)
+            tgt_text = samples["text_input"][0]
+            pred_text = self.t5_tokenizer.decode(outputs.logits[0].argmax(1))
+            print("tgt:", tgt_text, len(samples["text_input"][0]))
+            print("Pred:", pred_text)
+
+            try:
+                if random.random() < 0.1:
+                    translation_api_en2an_genel = "https://api.deepl.com/v2/translate"
+                    print(requests.post(translation_api_en2an_genel, data={'text': tgt_text}).json()['Data']['Translated'])
+                    print(requests.post(translation_api_en2an_genel, data={'text': pred_text}).json()['Data']['Translated'])
+            except:
+                pass
+
             loss = outputs.loss
 
             return {"loss": loss}
@@ -163,6 +184,7 @@ class Blip2T5(Blip2Base):
         length_penalty=1.0,
         num_captions=1,
         temperature=1,
+        temp_prompt=None
     ):
         """
         Args:
@@ -178,6 +200,8 @@ class Blip2T5(Blip2Base):
         Returns:
             captions (list): A list of strings of length batch_size * num_captions.
         """
+
+        # import pdb; pdb.set_trace()
         image = samples["image"]
         with torch.cuda.amp.autocast(enabled=(self.device != torch.device("cpu"))):
             image_embeds = self.ln_vision(self.visual_encoder(image))
@@ -200,6 +224,14 @@ class Blip2T5(Blip2Base):
             prompt = samples["prompt"]
         else:
             prompt = self.prompt
+        
+        if temp_prompt is None:
+            prompt = "Question: What does this show? Answer:"
+            # prompt = "Let's start a new dialogue. Tell me a joke. Answer: \n"
+        else:
+            prompt = temp_prompt
+        
+        print("Prompt:", prompt)
 
         if isinstance(prompt, str):
             prompt = [prompt] * image.size(0)
@@ -275,6 +307,13 @@ class Blip2T5(Blip2Base):
             text_input = [prompt.format(question) for question in samples["text_input"]]
         else:
             text_input = samples["text_input"]
+
+        # import pdb; pdb.set_trace()
+        text_input = ["Question: What is the color of this picture? Answer:" for _ in range(len(samples["text_input"]))]
+        text_input[0] = "Question: How many bodies here? Short Answer:"
+        text_input[1] = "Question: How many bodies here? Answer and explain:"
+        text_input[3] = "Question: How many bodies here? Answer:"
+        text_input[3] = "Question: How many bodies here? Let's count step by step: "
 
         input_tokens = self.t5_tokenizer(
             text_input, padding="longest", return_tensors="pt"

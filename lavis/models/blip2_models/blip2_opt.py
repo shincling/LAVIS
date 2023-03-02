@@ -143,6 +143,9 @@ class Blip2OPT(Blip2Base):
             return_dict=True,
             labels=targets,
         )
+        print("*"*20)
+        print("tgt:", samples["text_input"][0], len(samples["text_input"][0]))
+        print("Pred:", self.opt_tokenizer.decode(outputs.logits[0].argmax(1)))
         loss = outputs.loss
 
         return {"loss": loss}

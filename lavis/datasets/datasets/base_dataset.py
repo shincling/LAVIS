@@ -23,6 +23,7 @@ class BaseDataset(Dataset):
         self.vis_root = vis_root
 
         self.annotation = []
+        print("Loading annotations from: ", ann_paths)
         for ann_path in ann_paths:
             self.annotation.extend(json.load(open(ann_path, "r")))
 

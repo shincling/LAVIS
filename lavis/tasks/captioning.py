@@ -48,17 +48,24 @@ class CaptionTask(BaseTask):
         results = []
 
         # run_cfg = slf.cfg.run_cfg
+        temp_prompt = None
+        import pdb; pdb.set_trace()
+        pass
         captions = model.generate(
             samples,
             use_nucleus_sampling=False,
             num_beams=self.num_beams,
             max_length=self.max_len,
             min_length=self.min_len,
+            temp_prompt=temp_prompt
         )
 
+        import pdb; pdb.set_trace()
         img_ids = samples["image_id"]
         for caption, img_id in zip(captions, img_ids):
-            results.append({"caption": caption, "image_id": int(img_id)})
+            # TODO(Jing): temp hack for this img_id
+            results.append({"caption": caption, "image_id": str(img_id)})
+            # results.append({"caption": caption, "image_id": int(img_id)})
 
         return results
 
