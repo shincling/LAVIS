@@ -36,6 +36,7 @@ def parse_args():
     parser = argparse.ArgumentParser(description="Training")
 
     parser.add_argument("--cfg-path", required=True, help="path to configuration file.")
+    # parser.add_argument("--deepspeed", required=True, help="path to deepspeed config.")
     parser.add_argument(
         "--options",
         nargs="+",
