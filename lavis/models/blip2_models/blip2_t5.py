@@ -18,6 +18,48 @@ from lavis.models.blip2_models.blip2 import Blip2Base, disabled_train
 from lavis.models.blip2_models.modeling_t5 import T5Config, T5ForConditionalGeneration
 
 translation_api_en2an_genel = 'http://172.18.30.134:6220/aliyuntranslate_en_gen/' 
+prompts_list = [
+    "Describe the preceding. Answer:",
+    "Summarize the image.",
+    "A picture of",
+    "What is the image about? Answer:",
+    "The image shows",
+    "We could see from the image that",
+    "The description of the image is",
+    "How is the situation in the image? Answer:",
+]
+prompts_list_question = [
+    "{}Answer:",
+    "{}\nAnswer:",
+    "Question: {}\nAnswer:",
+    "Question: {}Answer:",
+    "{}",
+    "{}\n",
+]
+
+def pre_process_of_tgt(text_list):
+    final_text_list = []
+    for l in text_list:
+        if l.startswith("whole body imaging anterior and posterior"):
+            l = l.replace("whole body imaging anterior and posterior", "")
+        elif l.startswith("anterior and posterior position"):
+            l = l.replace("anterior and posterior position", "")
+        elif l.startswith("anteposition and posterior position"):
+            l = l.replace("anteposition and posterior position", "")
+        elif l.startswith("head and neck imaging anterior, posterior, left and right"):
+            l = l.replace("head and neck imaging anterior, posterior, left and right", "")
+        else:
+            print("Warning: ", l)
+            # new_l = l
+        final_text_list.append(l)
+
+    if random.random()<1:
+        print("$"*20)
+        print("text: ", text_list)
+        print("final_text_list: ", final_text_list)
+        print("$"*20)
+
+    return final_text_list
 
 @registry.register_model("blip2_t5")
 class Blip2T5(Blip2Base):
@@ -86,14 +128,23 @@ class Blip2T5(Blip2Base):
         )
 
         for name, param in self.t5_model.named_parameters():
-            param.requires_grad = False
-            param.data = param.data.bfloat16()
+            # param.requires_grad = False
+            # param.data = param.data.bfloat16()
+            # Todo(jing): open the following line to activate t5 model
+            if 'decoder.block.23' in name : #or 'decoder.block.22.layer' in name: #or 'decoder.block.21.layer' in name:
+                logging.info("open t5 model:{}".format(name))
+                param.requires_grad = True
+            else:
+                param.requires_grad = False
+                param.data = param.data.bfloat16()
 
+        # print([name for name,_ in self.t5_model.named_parameters()])
         self.t5_proj = nn.Linear(
             self.Qformer.config.hidden_size, self.t5_model.config.hidden_size
         )
 
-        self.max_txt_len = max_txt_len
+        # self.max_txt_len = max_txt_len
+        self.max_txt_len = 320
         self.prompt = prompt
 
         self._apply_lemmatizer = apply_lemmatizer
@@ -120,16 +171,37 @@ class Blip2T5(Blip2Base):
         # import pdb; pdb.set_trace()
         # Todo(jing): hack the prompt in T5 encoder
         with torch.cuda.amp.autocast(dtype=torch.bfloat16):
+            given_text = []
+            for sample_text in samples["text_input"]:
+                # 如果是QA的text input，就用QA的prompt
+                if "<|||>" in sample_text:
+                    given_text.append(random.choice(prompts_list_question).format(sample_text.split("<|||>")[0]))
+                else: 
+                    given_text.append(random.choice(prompts_list))
+
             input_tokens = self.t5_tokenizer(
-                # ["Question: What does this show? Answer:"] * len(samples["text_input"]),
-                [""] * len(samples["text_input"]),
+                # ["Describe the preceding. Answer:"] * len(samples["text_input"]),
+                # [""] * len(samples["text_input"]),
+                given_text,
                 padding="longest",
                 truncation=True,
                 max_length=self.max_txt_len,
                 return_tensors="pt",
             ).to(image.device)
+
+            tgt_text = []
+            # print("sample text:", samples["text_input"])
+            for sample_text in samples["text_input"]:
+                # 如果是QA的text input，就用QA的prompt
+                if "<|||>" in sample_text:
+                    tgt_text.append(sample_text.split("<|||>")[1])
+                else: 
+                    tgt_text.append(sample_text)
+            # temp_samples = pre_process_of_tgt(samples["text_input"])
             output_tokens = self.t5_tokenizer(
-                samples["text_input"], # TODO(Jing): bug report, there is no text_output in samples, but text_input
+                # temp_samples, # TODO(Jing): bug report, there is no text_output in samples, but text_input
+                # samples["text_input"],
+                tgt_text,
                 # samples["text_output"],
                 padding="longest",
                 truncation=True,
@@ -154,10 +226,12 @@ class Blip2T5(Blip2Base):
                 labels=targets,
             )
             print("*"*20)
-            tgt_text = samples["text_input"][0]
+            # tgt_text = samples['text_input'][0]
+            tgt_text = tgt_text[0]
             pred_text = self.t5_tokenizer.decode(outputs.logits[0].argmax(1))
-            print("tgt:", tgt_text, len(samples["text_input"][0]))
-            print("Pred:", pred_text)
+            print("tgt:", tgt_text, len(tgt_text))
+            print("given input:", given_text[0], len(given_text[0]))
+            print("Pred:", pred_text, outputs.logits.shape, len(pred_text))
 
             try:
                 if random.random() < 0.1:
@@ -225,11 +299,16 @@ class Blip2T5(Blip2Base):
         else:
             prompt = self.prompt
         
-        if temp_prompt is None:
-            prompt = "Question: What does this show? Answer:"
-            # prompt = "Let's start a new dialogue. Tell me a joke. Answer: \n"
+        # """
+        if temp_prompt == "skip": # 给部署的模型直接跳过去
+            pass
         else:
-            prompt = temp_prompt
+            if temp_prompt is None:
+                prompt = "Question: What does this show? Answer:"
+                # prompt = "Let's start a new dialogue. Tell me a joke. Answer: \n"
+            else:
+                prompt = temp_prompt
+        # """
         
         print("Prompt:", prompt)
 
@@ -267,6 +346,7 @@ class Blip2T5(Blip2Base):
             output_text = self.t5_tokenizer.batch_decode(
                 outputs, skip_special_tokens=True
             )
+            print("outputs:", outputs.shape)
 
         return output_text
 
@@ -309,11 +389,13 @@ class Blip2T5(Blip2Base):
             text_input = samples["text_input"]
 
         # import pdb; pdb.set_trace()
+        # """
         text_input = ["Question: What is the color of this picture? Answer:" for _ in range(len(samples["text_input"]))]
         text_input[0] = "Question: How many bodies here? Short Answer:"
         text_input[1] = "Question: How many bodies here? Answer and explain:"
         text_input[3] = "Question: How many bodies here? Answer:"
         text_input[3] = "Question: How many bodies here? Let's count step by step: "
+        # """
 
         input_tokens = self.t5_tokenizer(
             text_input, padding="longest", return_tensors="pt"
@@ -386,6 +468,7 @@ class Blip2T5(Blip2Base):
         img_size = cfg.get("image_size")
         num_query_token = cfg.get("num_query_token")
         t5_model = cfg.get("t5_model")
+        # t5_model = "/data2/shij/codes/BLIP2/LAVIS/lavis/output/BLIP2/Pretrain_stage2_t5/20230301150/checkpoint_99.pth"
 
         drop_path_rate = cfg.get("drop_path_rate", 0)
         use_grad_checkpoint = cfg.get("use_grad_checkpoint", False)
@@ -412,3 +495,93 @@ class Blip2T5(Blip2Base):
         model.load_checkpoint_from_config(cfg)
 
         return model
+
+    @torch.no_grad()
+    def generate_pureLM(
+        self,
+        samples,
+        use_nucleus_sampling=False,
+        num_beams=5,
+        max_length=30,
+        min_length=1,
+        top_p=0.9,
+        repetition_penalty=1.0,
+        length_penalty=1.0,
+        num_captions=1,
+        temperature=1,
+        temp_prompt=None
+    ):
+        """
+        Args:
+            samples (dict): A dictionary containing the following keys:
+                - image (torch.Tensor): A tensor of shape (batch_size, 3, H, W)
+            use_nucleus_sampling (bool): Whether to use nucleus sampling. If False, use top-k sampling.
+            num_beams (int): Number of beams for beam search. 1 means no beam search.
+            max_length (int): The maximum length of the sequence to be generated.
+            min_length (int): The minimum length of the sequence to be generated.
+            top_p (float): The cumulative probability for nucleus sampling.
+            repetition_penalty (float): The parameter for repetition penalty. 1.0 means no penalty.
+            num_captions (int): Number of captions to be generated for each image.
+        Returns:
+            captions (list): A list of strings of length batch_size * num_captions.
+        """
+
+        # import pdb; pdb.set_trace()
+        image = samples["image"]
+
+        if "prompt" in samples.keys():
+            prompt = samples["prompt"]
+        else:
+            prompt = self.prompt
+        
+        # """
+        if temp_prompt == "skip": # 给部署的模型直接跳过去
+            pass
+        else:
+            if temp_prompt is None:
+                prompt = "Question: What does this show? Answer:"
+                # prompt = "Let's start a new dialogue. Tell me a joke. Answer: \n"
+            else:
+                prompt = temp_prompt
+        # """
+        
+        print("Prompt:", prompt)
+
+        if isinstance(prompt, str):
+            prompt = [prompt] * image.size(0)
+        else:
+            assert len(prompt) == image.size(
+                0
+            ), "The number of prompts must be equal to the batch size."
+
+        input_tokens = self.t5_tokenizer(
+            prompt, padding="longest", return_tensors="pt", max_length=512,
+        ).to(image.device)
+
+        # encoder_atts = torch.cat([atts_t5, input_tokens.attention_mask], dim=1)
+        encoder_atts = input_tokens.attention_mask
+
+        device_type = "cuda" if "cuda" in str(self.device) else "cpu"
+        with torch.amp.autocast(device_type=device_type, dtype=torch.bfloat16):
+            inputs_embeds = self.t5_model.encoder.embed_tokens(input_tokens.input_ids)
+            # inputs_embeds = torch.cat([inputs_t5, inputs_embeds], dim=1)
+            print("inputs_embeds.shape:", inputs_embeds.shape)
+
+            outputs = self.t5_model.generate(
+                inputs_embeds=inputs_embeds,
+                attention_mask=encoder_atts,
+                do_sample=use_nucleus_sampling,
+                top_p=top_p,
+                temperature=temperature,
+                num_beams=num_beams,
+                max_new_tokens=max_length,
+                min_length=min_length,
+                repetition_penalty=repetition_penalty,
+                length_penalty=length_penalty,
+                num_return_sequences=num_captions,
+            )
+            output_text = self.t5_tokenizer.batch_decode(
+                outputs, skip_special_tokens=True
+            )
+
+        return output_text
