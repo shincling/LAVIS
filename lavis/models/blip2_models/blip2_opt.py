@@ -215,6 +215,7 @@ class Blip2OPT(Blip2Base):
             else:
                 query_embeds = inputs_opt.repeat_interleave(num_beams, dim=0)
 
+            # TODO(jing): 很奇怪这里为什么不想T5一样直接拼接，而是加了复杂的一个query_embeds放到里面去解决。
             outputs = self.opt_model.generate(
                 input_ids=input_ids,
                 query_embeds=query_embeds,
