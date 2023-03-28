@@ -7,7 +7,7 @@ model:
   # arch: blip2_opt
   # model_type: pretrain_opt2.7b 
   arch: blip2_t5
-  model_type: pretrain_flant5xl # lavis/models/blip2_models/blip2_t5.py
+  model_type: pretrain_flant5xxl # lavis/models/blip2_models/blip2_t5.py
   load_pretrained: False
   # intialize stage 2 pretraining from stage 1 pretrained model
   # pretrained: "https://storage.googleapis.com/sfr-vision-language-research/LAVIS/models/BLIP2/blip2_pretrained.pth"
@@ -15,10 +15,13 @@ model:
   # pretrained: "/data2/shij/codes/BLIP2/LAVIS/lavis/output/BLIP2/Pretrain_stage1/20230227023_ep20bs120/checkpoint_19.pth"
   # pretrained: "/data2/shij/codes/BLIP2/LAVIS/lavis/output/BLIP2/Pretrain_stage1/20230227025_ep30bs120/checkpoint_29.pth"
   # pretrained: "/data2/shij/codes/BLIP2/LAVIS/lavis/output/BLIP2/Pretrain_stage2_t5/20230301122/checkpoint_149.pth" # T5 encoder 变成固定prompt
-  # pretrained: "/data2/shij/codes/BLIP2/LAVIS/lavis/output/BLIP2/Pretrain_stage1/20230301151/checkpoint_499.pth" # Stage1 重新训练
+  pretrained: "/data2/shij/codes/BLIP2/LAVIS/lavis/output/BLIP2/Pretrain_stage1/20230301151/checkpoint_499.pth" # Stage1 重新训练
 
   # pure stage1 med pretrained 
-  pretrained: "/data2/shij/codes/BLIP2/LAVIS/lavis/output/BLIP2/Pretrain_stage1/20230307025/checkpoint_49.pth"
+  # pretrained: "/data2/shij/codes/BLIP2/LAVIS/lavis/output/BLIP2/Pretrain_stage1/20230307025/checkpoint_49.pth"
+  # pretrained: "/data2/shij/codes/BLIP2/LAVIS/lavis/output/BLIP2/Pretrain_stage2_t5_xxl/20230314024/checkpoint_9.pth"
+
+  # pretrained: "/data2/shij/codes/BLIP2/LAVIS/lavis/output/BLIP2/Pretrain_stage2_t5_xxl/20230309020/checkpoint_99.pth"
   freeze_vit: True
   # freeze_vit: False
 
@@ -41,7 +44,7 @@ datasets:
     text_processor:
         train:
           name: "blip_caption"
-          max_words: 500
+          max_txt_len: 500
     # build_info:
     #     images:
     #         storage: '/export/share/datasets/vision/coco/images/'          
@@ -68,14 +71,14 @@ run:
   weight_decay: 0.05
   max_epoch: 100
   # batch_size_train: 16 # 16 for FlanT5-xxl
-  batch_size_train: 20 # 16 for FlanT5-xl with 3 layers open
+  batch_size_train: 5 # 6 for FlanT5-xxl with 1 layers open and 300 len
   # batch_size_train: 16 # 16 for FlanT5-xxl
   batch_size_eval: 64
   num_workers: 4
-  warmup_steps: 50
+  warmup_steps: 200
 
   seed: 42
-  output_dir: "output/BLIP2/Pretrain_stage2_t5"
+  output_dir: "output/BLIP2/Pretrain_stage2_t5_xxl"
 
   amp: True
   resume_ckpt_path: null
