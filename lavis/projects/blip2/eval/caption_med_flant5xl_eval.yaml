@@ -14,7 +14,7 @@
 
 model:
   arch: blip2_t5
-  model_type: pretrain_flant5xl
+  model_type: pretrain_flant5xxl
   use_grad_checkpoint: False
   # pretrained: "/data2/shij/codes/BLIP2/LAVIS/lavis/output/BLIP2/Pretrain_stage2/20230227072_t5xl_30ep/checkpoint_29.pth"
   # pretrained: "/data2/shij/codes/BLIP2/LAVIS/lavis/output/BLIP2/Pretrain_stage2/20230228041/checkpoint_5.pth"
@@ -28,9 +28,25 @@ model:
   # pretrained: "/data2/shij/codes/BLIP2/LAVIS/lavis/output/BLIP2/Pretrain_stage2_t5/20230301082/checkpoint_1.pth" # 小lr精心训练
   # pretrained: "/data2/shij/codes/BLIP2/LAVIS/lavis/output/BLIP2/Pretrain_stage2_t5/20230301093/checkpoint_49.pth" # T5 encoder 变成固定prompt
   # pretrained: "/data2/shij/codes/BLIP2/LAVIS/lavis/output/BLIP2/Pretrain_stage2_t5/20230301122/checkpoint_149.pth" # T5 encoder 变成固定prompt
-  pretrained: "/data2/shij/codes/BLIP2/LAVIS/lavis/output/BLIP2/Pretrain_stage2_t5/20230301150/checkpoint_99.pth" # T5 encoder 变成固定prompt
+  # pretrained: "/data2/shij/codes/BLIP2/LAVIS/lavis/output/BLIP2/Pretrain_stage2_t5/20230301150/checkpoint_99.pth" # T5 encoder 变成固定prompt
+
+  # pretrained: "/data2/shij/codes/BLIP2/LAVIS/lavis/output/BLIP2/Pretrain_stage2_t5/20230302082/checkpoint_0.pth" # T5 encoder 变成固定prompt
+  # pretrained: "/data2/shij/codes/BLIP2/LAVIS/lavis/output/BLIP2/Pretrain_stage2_t5/20230302100/checkpoint_40.pth" # T5 encoder 变成固定prompt
+
+  # pretrained: "/data2/shij/codes/BLIP2/LAVIS/lavis/output/BLIP2/Pretrain_stage2_t5/20230302160/checkpoint_9.pth" # xxl 难得还不错啊，加了train的prompt 2.56loss左右
+
+  # pretrained: "/data2/shij/codes/BLIP2/LAVIS/lavis/output/BLIP2/Pretrain_stage2_t5/20230303090/checkpoint_1.pth" # xxl 难得还不错啊，加了train的prompt 
+  # pretrained: "/data2/shij/codes/BLIP2/LAVIS/lavis/output/BLIP2/Pretrain_stage2_t5/20230303091/checkpoint_5.pth" # xxl 难得还不错啊，加了train的prompt 
   # pretrained: "/data2/shij/codes/BLIP2/LAVIS/lavis/output/BLIP2/Pretrain_stage2_t5/20230302004/checkpoint_250.pth" # T5 encoder 变成固定prompt
   # pretrained: "/data2/shij/codes/BLIP2/LAVIS/lavis/output/BLIP2/Pretrain_stage2/20230227042_t5xxl_10ep/checkpoint_9.pth"
+
+  # XL great again
+  # pretrained: "/data2/shij/codes/BLIP2/LAVIS/lavis/output/BLIP2/Pretrain_stage2_t5/20230306094/checkpoint_199.pth" 
+
+  # pretrained: "/data2/shij/codes/BLIP2/LAVIS/lavis/output/BLIP2/Pretrain_stage2_t5/20230313064/checkpoint_9.pth"  # 动了LLM最后基层的结果
+  # pretrained: "/data2/shij/codes/BLIP2/LAVIS/lavis/output/BLIP2/Pretrain_stage2_t5/20230307033/checkpoint_199.pth" 
+  pretrained: "/data2/shij/codes/BLIP2/LAVIS/lavis/output/BLIP2/Pretrain_stage2_t5_xxl/20230315070/checkpoint_99.pth" # T5 encoder 变成固定prompt
+
 
 datasets:
   # coco_caption: # name of the dataset builder
@@ -59,10 +75,10 @@ run:
   task: captioning
   # optimizer
   batch_size_train: 32
-  batch_size_eval: 32
+  batch_size_eval: 8
   num_workers: 4
 
-  max_len: 30
+  max_len: 100
   min_len: 8
   num_beams: 5
 

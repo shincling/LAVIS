@@ -6,14 +6,18 @@
 # Overall Accuracy is: 43.98
 model:
   arch: blip2_t5
-  model_type: pretrain_flant5xl
+  model_type: pretrain_flant5xxl
   use_grad_checkpoint: False
   # pretrained: "/data2/shij/codes/BLIP2/LAVIS/lavis/output/BLIP2/Pretrain_stage2_t5/20230228122/checkpoint_1.pth" # T5 encoder 变成固定prompt
   # pretrained: "/data2/shij/codes/BLIP2/LAVIS/lavis/output/BLIP2/Pretrain_stage2_t5/20230301082/checkpoint_1.pth"# T5 encoder 变成固定prompt
   # pretrained: "/data2/shij/codes/BLIP2/LAVIS/lavis/output/BLIP2/Pretrain_stage2_t5/20230301093/checkpoint_49.pth" # T5 encoder 变成固定prompt
   # pretrained: "/data2/shij/codes/BLIP2/LAVIS/lavis/output/BLIP2/Pretrain_stage2_t5/20230301122/checkpoint_149.pth" # T5 encoder 变成固定prompt
-  # pretrained: "/data2/shij/codes/BLIP2/LAVIS/lavis/output/BLIP2/Pretrain_stage2_t5/20230301150/checkpoint_499.pth" # T5 encoder 变成固定prompt
-  pretrained: "/data2/shij/codes/BLIP2/LAVIS/lavis/output/BLIP2/Pretrain_stage2_t5/20230302004/checkpoint_250.pth" # T5 encoder 变成固定prompt
+  # pretrained: "/data2/shij/codes/BLIP2/LAVIS/lavis/output/BLIP2/Pretrain_stage2_t5/20230301150/checkpoint_99.pth" # T5 encoder 变成固定prompt
+
+  # pretrained: "/data2/shij/codes/BLIP2/LAVIS/lavis/output/BLIP2/Pretrain_stage2_t5/20230302082/checkpoint_1.pth" # T5 encoder 变成固定prompt
+  # pretrained: "/data2/shij/codes/BLIP2/LAVIS/lavis/output/BLIP2/Pretrain_stage2_t5/20230302120/checkpoint_0.pth" # T5 encoder 变成固定prompt
+  # pretrained: "/data2/shij/codes/BLIP2/LAVIS/lavis/output/BLIP2/Pretrain_stage2_t5/20230302004/checkpoint_250.pth" # T5 encoder 变成固定prompt
+  pretrained: "/data2/shij/codes/BLIP2/LAVIS/lavis/output/BLIP2/Pretrain_stage2_t5/20230315070/checkpoint_99.pth" # T5 encoder 变成固定prompt
 
 
 datasets:
@@ -46,7 +50,7 @@ run:
   task: gqa
   # optimization-specific
   batch_size_train: 16
-  batch_size_eval: 64
+  batch_size_eval: 8
   num_workers: 4
 
   # inference-specific
