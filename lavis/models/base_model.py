@@ -56,7 +56,7 @@ class BaseModel(nn.Module):
         return msg
 
     @classmethod
-    def from_pretrained(cls, model_type):
+    def from_pretrained(cls, model_type, pre_model_path=None):
         """
         Build a pretrained model from default configuration file, specified by model_type.
 
@@ -66,7 +66,13 @@ class BaseModel(nn.Module):
         Returns:
             - model (nn.Module): pretrained or finetuned model, depending on the configuration.
         """
+
         model_cfg = OmegaConf.load(cls.default_config_path(model_type)).model
+        # TODO(jing): temp hack to load pretrained model
+        if pre_model_path is not None:
+            # pre_model = "/data2/shij/codes/BLIP2/LAVIS/lavis/output/BLIP2/Pretrain_stage2_t5/20230301150/checkpoint_99.pth"
+            input("Make sure this will load the pretrained model:{}".format(pre_model_path))
+            model_cfg['pretrained'] = pre_model_path
         model = cls.from_config(model_cfg)
 
         return model
@@ -86,6 +92,7 @@ class BaseModel(nn.Module):
         When loading the pretrained model, each task-specific architecture may define their
         own load_from_pretrained() method.
         """
+        # import pdb; pdb.set_trace()
         load_finetuned = cfg.get("load_finetuned", True)
         if load_finetuned:
             finetune_path = cfg.get("finetuned", None)

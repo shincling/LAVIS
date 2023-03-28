@@ -32,6 +32,7 @@ from lavis.models.blip_models.blip_vqa import BlipVQA
 
 from lavis.models.blip2_models.blip2 import Blip2Base
 from lavis.models.blip2_models.blip2_opt import Blip2OPT
+from lavis.models.blip2_models.blip2_llama import Blip2LLaMA
 from lavis.models.blip2_models.blip2_t5 import Blip2T5
 from lavis.models.blip2_models.blip2_qformer import Blip2Qformer
 from lavis.models.blip2_models.blip2_image_text_matching import Blip2ITM
@@ -80,6 +81,7 @@ __all__ = [
     "VisionTransformerEncoder",
     "XBertLMHeadDecoder",
     "GPTDialogue",
+    "Blip2LLaMA"
 ]
 
 
@@ -169,7 +171,7 @@ def load_preprocess(config):
     return vis_processors, txt_processors
 
 
-def load_model_and_preprocess(name, model_type, is_eval=False, device="cpu"):
+def load_model_and_preprocess(name, model_type, is_eval=False, device="cpu", pre_model_path = None):
     """
     Load model and its related preprocessors.
 
@@ -191,7 +193,7 @@ def load_model_and_preprocess(name, model_type, is_eval=False, device="cpu"):
     model_cls = registry.get_model_class(name)
 
     # load model
-    model = model_cls.from_pretrained(model_type=model_type)
+    model = model_cls.from_pretrained(model_type=model_type, pre_model_path=pre_model_path)
 
     if is_eval:
         model.eval()

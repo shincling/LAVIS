@@ -495,15 +495,15 @@ class Blip2Qformer(Blip2Base):
         )
 
         # TODO(Jing): should not load the pretrained model for when cfg.load_pretrained is False
-        """
+        # """
         if cfg.get("load_pretrained"):
             logging.info("Loaded pretrained model from {}".format(cfg.pretrained_path))
             model.load_checkpoint_from_config(cfg)
         else:
             logging.info("We train the model from scratch !!!!!!")
-        """
+        # """
 
-        model.load_checkpoint_from_config(cfg)
+        # model.load_checkpoint_from_config(cfg)
 
         return model
 

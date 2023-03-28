@@ -59,6 +59,7 @@ class Blip2Base(BaseModel):
         return visual_encoder, ln_vision
 
     def load_from_pretrained(self, url_or_filename):
+        # import pdb; pdb.set_trace()
         if is_url(url_or_filename):
             cached_file = download_cached_file(
                 url_or_filename, check_hash=False, progress=True
@@ -75,6 +76,7 @@ class Blip2Base(BaseModel):
         msg = self.load_state_dict(state_dict, strict=False)
 
         logging.info("Missing keys {}".format(msg.missing_keys))
+        print("Missing keys {}".format(msg.missing_keys))
         logging.info("load checkpoint from %s" % url_or_filename)
 
         return msg
@@ -116,7 +118,7 @@ def compute_sim_matrix(model, data_loader, **kwargs):
             text,
             padding="max_length",
             truncation=True,
-            max_length=35,
+            max_length=35, # TODO(jing): this could increase to ~300
             return_tensors="pt",
         ).to(model.device)
         text_feat = model.forward_text(text_input)
