@@ -16,25 +16,47 @@ from lavis.models.blip2_models.blip2 import Blip2Base, disabled_train
 from lavis.models.blip2_models.modeling_opt import OPTForCausalLM, OPTConfig
 from transformers import AutoTokenizer, AutoModelForCausalLM
 
+prompt_input =  (
+    "Above is an medical image illustration of a patient, write a response that appropriately completes the following request."
+    "\n\n Input:\n{}\n\n Response:"
+)
+    
+
+prompts_list_new = [
+    "Describe the image.",
+    "Describe the preceding.",
+    "Summarize the image.",
+    "What is this picture about?",
+    "What is the image about?",
+    "What does this condition show?",
+    "What could we see see from the image?",
+    "Tell me the description of the image.",
+    "How is the situation in the image?",
+    "How about my condition?",
+    "What is the condition?",
+    "What is the patient's condition?",
+    "Summarize my condition.",
+]
 prompts_list = [
     "Describe the image. Response:",
     "Describe the preceding. Answer:",
-    "Summarize the image.",
-    "A picture of",
+    "Summarize the image. Response:",
+    # "A picture of",
     "What is the image about? Answer:",
-    "The image shows",
-    "We could see from the image that",
-    "The description of the image is",
+    # "The image shows",
+    # "We could see from the image that",
+    # "The description of the image is",
     "How is the situation in the image? Answer:",
 ]
 
 
 prompts_list_question = [
     "{}Answer:",
+    "{}Response:",
     # "{}\nAnswer:",
     # "Question: {}\nAnswer:",
-    "Question: {}Answer:",
-    "{}",
+    # "Question: {}Answer:",
+    # "{}",
     # "{}\n",
 ]
 
@@ -64,6 +86,8 @@ class Blip2LLaMA(Blip2Base):
         # "pretrain_llama2.7b": "configs/models/blip2/blip2_pretrain_llama2.7b.yaml",
         "pretrain_llama7b": "configs/models/blip2/blip2_pretrain_llama7b.yaml",
         "pretrain_alpaca7b": "configs/models/blip2/blip2_pretrain_alpaca7b.yaml",
+        "pretrain_vicuna13b": "configs/models/blip2/blip2_pretrain_vicuna13b.yaml",
+        "pretrain_zidong13b": "configs/models/blip2/blip2_pretrain_zidong13b.yaml",
     }
 
     def __init__(
@@ -94,7 +118,7 @@ class Blip2LLaMA(Blip2Base):
             logging.info("freeze vision encoder")
 
         self.Qformer, self.query_tokens = self.init_Qformer(
-            num_query_token, self.visual_encoder.num_features
+            num_query_token, 512, #self.visual_encoder.num_features
         )
         self.Qformer.cls = None
         self.Qformer.bert.embeddings.word_embeddings = None
@@ -116,14 +140,15 @@ class Blip2LLaMA(Blip2Base):
         # )
         for name, param in self.llama_model.named_parameters():
             # 暂时先不用 bf16？llama没用
-            # param.data = param.data.bfloat16()
-            # param.requires_grad = False
-            if 'layers.31' in name : #or 'decoder.block.22.layer' in name: #or 'decoder.block.21.layer' in name:
-                logging.info("open LLAMA model:{}".format(name))
-                param.requires_grad = True
-            else:
-                param.requires_grad = False
-                param.data = param.data.bfloat16()
+            param.data = param.data.bfloat16()
+            param.requires_grad = False
+            continue 
+            # if 'layers.31' in name : #or 'decoder.block.22.layer' in name: #or 'decoder.block.21.layer' in name:
+                # logging.info("open LLAMA model:{}".format(name))
+                # param.requires_grad = True
+            # else:
+                # param.requires_grad = False
+                # param.data = param.data.bfloat16()
 
         self.eos_token_id = self.llama_tokenizer(
             # "\n", add_special_tokens=False
@@ -167,13 +192,15 @@ class Blip2LLaMA(Blip2Base):
                 # 如果是QA的text input，就用QA的prompt
                 if "<|||>" in sample_text:
                     ques_text = sample_text.split("<|||>")[0]
-                    if ques_text[-1] not in ["?", "？", "。", "!", "！", "…", "."]:
-                        ques_text += "?"
+                    # if ques_text[-1] not in ["?", "？", "。", "!", "！", "…", "."]:
+                        # ques_text += "?"
                     temp_prompt = random.choice(prompts_list_question).format(ques_text)
+                    # temp_prompt = prompt_input.format(ques_text)
                     prompt_text.append(temp_prompt)
                     given_text.append(temp_prompt + " " + sample_text.split("<|||>")[1])
                 else: 
                     temp_prompt = random.choice(prompts_list)
+                    # temp_prompt = prompt_input.format(random.choice(prompts_list_new))
                     prompt_text.append(temp_prompt)
                     given_text.append(temp_prompt + " " + sample_text)
             text = [t+'</s>' for t in given_text]
