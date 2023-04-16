@@ -107,6 +107,7 @@ class Blip2LLaMA(Blip2Base):
 
         self.tokenizer = self.init_tokenizer()
 
+        """
         self.visual_encoder, self.ln_vision = self.init_vision_encoder(
             img_size, drop_path_rate, use_grad_checkpoint, vit_precision
         )
@@ -116,6 +117,7 @@ class Blip2LLaMA(Blip2Base):
             self.visual_encoder = self.visual_encoder.eval()
             self.visual_encoder.train = disabled_train
             logging.info("freeze vision encoder")
+        """
 
         self.Qformer, self.query_tokens = self.init_Qformer(
             num_query_token, 512, #self.visual_encoder.num_features
@@ -166,8 +168,11 @@ class Blip2LLaMA(Blip2Base):
         self.prompt_length = prompt_tokens.attention_mask.sum(1)
 
     def forward(self, samples):
-        image = samples["image"]
-        image_embeds = self.ln_vision(self.visual_encoder(image))
+        # image = samples["image"]
+        # image_embeds = self.ln_vision(self.visual_encoder(image))
+        image = samples["audio"]
+        image_embeds = image
+
         image_atts = torch.ones(image_embeds.size()[:-1], dtype=torch.long).to(
             image.device
         )

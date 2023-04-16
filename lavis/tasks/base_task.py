@@ -15,6 +15,7 @@ from lavis.common.logger import MetricLogger, SmoothedValue
 from lavis.common.registry import registry
 from lavis.datasets.data_utils import prepare_sample
 
+import random
 
 class BaseTask:
     def __init__(self, **kwargs):
@@ -62,7 +63,10 @@ class BaseTask:
         return datasets
 
     def train_step(self, model, samples):
-        loss = model(samples)["loss"]
+        all_loss = model(samples)
+        if random.random() < 0.1:
+            print("train_step loss detail", all_loss)
+        loss = all_loss["loss"]
         return loss
 
     def valid_step(self, model, samples):

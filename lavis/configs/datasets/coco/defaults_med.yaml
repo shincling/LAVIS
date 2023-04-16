@@ -18,7 +18,8 @@ datasets:
           url: "/data2/shij/data/Med2/raw_data/train_texts_with_id.json"
           # storage: med2/annotations/med_train_with_id.json
           # storage: med2/annotations/med2_qa_with_id.json
-          storage: med2/annotations/med_cap_5qa_with_id.json
+          # storage: med2/annotations/med_cap_5qa_with_id.json
+          storage: med2/annotations/med_cap_3x1900qa_1.0xalpaca_with_id.json
         val:
           url: "/data2/shij/data/Med2/raw_data/valid_texts.json"
           storage: med2/annotations/med_val.json

@@ -371,6 +371,7 @@ class RunnerBase:
             if not self.evaluate_only:
                 logging.info("Start training")
                 train_stats = self.train_epoch(cur_epoch)
+                # import pdb; pdb.set_trace()
                 self.log_stats(split_name="train", stats=train_stats)
 
             # evaluation phase

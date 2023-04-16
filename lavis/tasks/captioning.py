@@ -49,7 +49,7 @@ class CaptionTask(BaseTask):
 
         # run_cfg = slf.cfg.run_cfg
         temp_prompt = None
-        import pdb; pdb.set_trace()
+        # import pdb; pdb.set_trace()
         captions = model.generate(
             samples,
             use_nucleus_sampling=False,

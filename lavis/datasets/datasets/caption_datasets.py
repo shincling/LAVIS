@@ -10,6 +10,8 @@ from collections import OrderedDict
 
 from lavis.datasets.datasets.base_dataset import BaseDataset
 from PIL import Image
+import soundfile as sf
+import numpy as np
 
 
 class __DisplMixin:
@@ -114,4 +116,51 @@ class MedCaptionDataset(BaseDataset, __DisplMixin):
             "image": image,
             "text_input": caption,
             "image_id": self.img_ids[ann["image_id"]],
+        }
+
+class AudioCaptionDataset(BaseDataset, __DisplMixin):
+    def __init__(self, vis_processor, text_processor, vis_root, ann_paths):
+        """
+        vis_root (string): Root directory of images (e.g. coco/images/)
+        ann_root (string): directory to store the annotation file
+        """
+        audio_processor = vis_processor
+        super().__init__(audio_processor, text_processor, vis_root, ann_paths)
+        # 这里是在原有的vis的基础上继承audio_processor, 所以底下做一些名字上的映射吧
+        self.audio_processor = self.vis_processor
+        self.audio_root = self.vis_root
+
+        self.audio_ids = {}
+        n = 0
+        for ann in self.annotation:
+            audio_id = ann["audio_id"]
+            if audio_id not in self.audio_ids.keys():
+                self.audio_ids[audio_id] = n
+                n += 1
+
+    def __getitem__(self, index):
+
+        # TODO this assumes image input, not general enough
+        ann = self.annotation[index]
+
+        audio_path = os.path.join(self.audio_root, ann["audio"])
+        audio_npy, sr = sf.read(audio_path)
+        assert sr == 16000 and audio_npy.ndim == 1, "audio should be 1-channel and sr=16000, but got {} and {}".format(sr, audio_npy.shape[0])
+
+        # normalize 
+        audio_npy = audio_npy / np.max(np.abs(audio_npy))
+
+        # padding or truncating to 10s 
+        if audio_npy.shape[0] < 160000:
+            audio_npy = np.pad(audio_npy, (0, 160000-audio_npy.shape[0]), 'constant')
+        else:
+            audio_npy = audio_npy[:160000]
+
+        audio = self.audio_processor(audio_npy)
+        caption = self.text_processor(ann["caption"])
+
+        return {
+            "audio": audio,
+            "text_input": caption,
+            "audio_id": self.audio_ids[ann["audio_id"]],
         }

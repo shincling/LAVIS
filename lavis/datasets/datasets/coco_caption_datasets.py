@@ -13,10 +13,11 @@ from PIL import ImageFile
 
 ImageFile.LOAD_TRUNCATED_IMAGES = True
 
-from lavis.datasets.datasets.caption_datasets import  MedCaptionDataset, CaptionDataset, CaptionEvalDataset
+from lavis.datasets.datasets.caption_datasets import  MedCaptionDataset, CaptionDataset, CaptionEvalDataset, AudioCaptionDataset
 
 COCOCapDataset = CaptionDataset
 MedCapDataset = MedCaptionDataset
+AudioCapDataset = AudioCaptionDataset
 
 
 class COCOCapEvalDataset(CaptionEvalDataset):

@@ -62,7 +62,12 @@ model, vis_processors, _ = load_model_and_preprocess(
     # name="blip2_llama", model_type="pretrain_llama7b", is_eval=True, device=device, pre_model_path="/data2/shij/codes/BLIP2/LAVIS/lavis/output/BLIP2/Pretrain_stage2_llama/20230324080/checkpoint_9.pth"
     # name="blip2_llama", model_type="pretrain_llama7b", is_eval=True, device=device, pre_model_path="/data2/shij/codes/BLIP2/LAVIS/lavis/output/BLIP2/Pretrain_stage2_llama/20230327032/checkpoint_9.pth"
     # name="blip2_llama", model_type="pretrain_llama7b", is_eval=True, device=device, pre_model_path="/data2/shij/codes/BLIP2/LAVIS/lavis/output/BLIP2/Pretrain_stage2_llama/20230327061/checkpoint_8.pth"
-    name="blip2_llama", model_type="pretrain_llama7b", is_eval=True, device=device, pre_model_path="/data2/shij/codes/BLIP2/LAVIS/lavis/output/BLIP2/Pretrain_stage2_llama/20230327092/checkpoint_19.pth"
+    # name="blip2_llama", model_type="pretrain_llama7b", is_eval=True, device=device, pre_model_path="/data2/shij/codes/BLIP2/LAVIS/lavis/output/BLIP2/Pretrain_stage2_llama/20230327092/checkpoint_9.pth"
+    # name="blip2_llama", model_type="pretrain_llama7b", is_eval=True, device=device, pre_model_path="/data2/shij/codes/BLIP2/LAVIS/lavis/output/BLIP2/Pretrain_stage2_llama/20230329084/checkpoint_19.pth"
+    # name="blip2_llama", model_type="pretrain_llama7b", is_eval=True, device=device, pre_model_path="/data2/shij/codes/BLIP2/LAVIS/lavis/output/BLIP2/Pretrain_stage2_llama/20230330135/checkpoint_19.pth"
+    # name="blip2_llama", model_type="pretrain_llama7b", is_eval=True, device=device, pre_model_path="/data2/shij/codes/BLIP2/LAVIS/lavis/output/BLIP2/Pretrain_stage2_llama/20230331073/checkpoint_9.pth"
+    name="blip2_llama", model_type="pretrain_llama7b", is_eval=True, device=device, pre_model_path="/data2/shij/codes/BLIP2/LAVIS/lavis/output/BLIP2/Pretrain_stage2_llama/20230412152/checkpoint_29.pth"
+
 )
 # del temp
 del _
@@ -105,14 +110,19 @@ def notes_list():
         input_text_en = input_text_en.replace("Problem:", "Question:").strip()
         prompt = input_text_en
         # response = model.generate({"image": given_image, "prompt": prompt}, max_length=300, repetition_penalty=2.0, temp_prompt="skip", early_stopping=False)
-        response = model.generate({"image": given_image, "prompt": prompt}, max_length=300, repetition_penalty=2.5, temp_prompt="skip", early_stopping=True)
+        response = model.generate({"image": given_image, "prompt": prompt}, max_length=320, repetition_penalty=2.5, temp_prompt="skip", early_stopping=True)
+        response = response[0]
 
+        print("Response: ", response)
         if "</s>" in response:
-            response = response.split("</s>")[0]
+            response = response.replace("</s>","")
+            # response = response.split("</s>")[0]
+        if response.endswith("</"):
+            response = response[:-2]
+        print("Response: ", response)
         # response = model.generate({"image": given_image, "prompt": prompt}, max_length=300, temp_prompt="skip")
         response_trans = requests.post(translation_api_en2cn_genel, data={'text': response}).json()['Data']['Translated']
 
-        print("Response: ", response)
         result_dict = {
             "input_text": text,
             "prompt": text,

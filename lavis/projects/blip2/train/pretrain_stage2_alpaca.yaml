@@ -14,7 +14,9 @@ model:
   # pretrained: "/data2/shij/codes/BLIP2/LAVIS/lavis/output/BLIP2/Pretrain_stage1/20230227023_ep20bs120/checkpoint_19.pth"
   # pretrained: "/data2/shij/codes/BLIP2/LAVIS/lavis/output/BLIP2/Pretrain_stage1/20230227025_ep30bs120/checkpoint_29.pth"
   # pretrained: "/data2/shij/codes/BLIP2/LAVIS/lavis/output/BLIP2/Pretrain_stage2_t5/20230301122/checkpoint_149.pth" # T5 encoder 变成固定prompt
-  pretrained: "/data2/shij/codes/BLIP2/LAVIS/lavis/output/BLIP2/Pretrain_stage1/20230301151/checkpoint_499.pth" # Stage1 重新训练
+  # pretrained: "/data2/shij/codes/BLIP2/LAVIS/lavis/output/BLIP2/Pretrain_stage1/20230301151/checkpoint_499.pth" # Stage1 重新训练
+  # pretrained: "/data2/shij/codes/BLIP2/LAVIS/lavis/output/BLIP2/Pretrain_stage1/20230409090/checkpoint_399.pth" # Stage1 重新训练
+  pretrained: "/data2/shij/codes/BLIP2/LAVIS/lavis/output/BLIP2/Pretrain_stage2_llama/20230412063/checkpoint_29.pth"
 
   # pure stage1 med pretrained 
   # pretrained: "/data2/shij/codes/BLIP2/LAVIS/lavis/output/BLIP2/Pretrain_stage1/20230307025/checkpoint_49.pth"
@@ -66,7 +68,7 @@ run:
   warmup_lr: 1e-6
 
   weight_decay: 0.05
-  max_epoch: 20
+  max_epoch: 30
   # batch_size_train: 16 # 16 for FlanT5-xxl
   batch_size_train: 2 # 16 for FlanT5-xl with 3 layers open
   # batch_size_train: 16 # 16 for FlanT5-xxl

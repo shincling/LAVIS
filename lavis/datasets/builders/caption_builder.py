@@ -12,6 +12,7 @@ from lavis.datasets.datasets.coco_caption_datasets import (
     NoCapsEvalDataset,
     MedCapDataset,
     MedCapEvalDataset,
+    AudioCapDataset
 )
 
 from lavis.common.registry import registry
@@ -36,6 +37,15 @@ class COCOCapBuilder(BaseDatasetBuilder):
 
     DATASET_CONFIG_DICT = {
         "default": "configs/datasets/coco/defaults_cap.yaml",
+    }
+
+@registry.register_builder("audio_caption")
+class AudioCapBuilder(BaseDatasetBuilder):
+    train_dataset_cls = AudioCapDataset
+    eval_dataset_cls = AudioCapDataset # TODO(jing): change this to AudioCapEvalDataset
+
+    DATASET_CONFIG_DICT = {
+        "default": "configs/datasets/music_caption/defaults_music.yaml",
     }
 
 
