@@ -48,6 +48,22 @@ prompts_list = [
     # "The description of the image is",
     "How is the situation in the image? Answer:",
 ]
+prompts_list = [
+    "描述这段音乐。回答：",
+    "描述这段音乐。",
+    "请描述之前给定的材料。",
+    "请描述之前给定的材料。回答：",
+    "概括这段音乐的内容。",
+    "这段音乐是关于什么的？",
+    "这段音乐的情况是什么？",
+    "请以自己的话描述这段音乐。",
+    "试着描述这段音乐，表达对它的感受和印象。",
+    "请用你自己的话概括之前给定的材料，强调其中的重点和关键信息。",
+    "请描述之前给定的材料，让读者能够清晰地理解它所涉及的主题和背景。",
+    "请以简明扼要的语言概括这段音乐的内容和主旨，让读者能够快速了解它的特点和风格。",
+    "这段音乐片段的信息有哪些？请用你自己的话进行描述，并解释它们对你的意义。",
+    "请描述这段音乐所呈现的场景和情境。回答：",
+]
 
 
 prompts_list_question = [
@@ -85,9 +101,11 @@ class Blip2LLaMA(Blip2Base):
     PRETRAINED_MODEL_CONFIG_DICT = {
         # "pretrain_llama2.7b": "configs/models/blip2/blip2_pretrain_llama2.7b.yaml",
         "pretrain_llama7b": "configs/models/blip2/blip2_pretrain_llama7b.yaml",
+        "pretrain_llama7b-linba": "configs/models/blip2/blip2_pretrain_llama7b-linba.yaml",
         "pretrain_alpaca7b": "configs/models/blip2/blip2_pretrain_alpaca7b.yaml",
         "pretrain_vicuna13b": "configs/models/blip2/blip2_pretrain_vicuna13b.yaml",
         "pretrain_zidong13b": "configs/models/blip2/blip2_pretrain_zidong13b.yaml",
+        "pretrain_zidong13b-audio": "configs/models/blip2/blip2_pretrain_zidong13b-audio.yaml",
     }
 
     def __init__(
@@ -107,21 +125,27 @@ class Blip2LLaMA(Blip2Base):
 
         self.tokenizer = self.init_tokenizer()
 
-        """
-        self.visual_encoder, self.ln_vision = self.init_vision_encoder(
-            img_size, drop_path_rate, use_grad_checkpoint, vit_precision
-        )
-        if freeze_vit:
-            for name, param in self.visual_encoder.named_parameters():
-                param.requires_grad = False               
-            self.visual_encoder = self.visual_encoder.eval()
-            self.visual_encoder.train = disabled_train
-            logging.info("freeze vision encoder")
-        """
 
-        self.Qformer, self.query_tokens = self.init_Qformer(
-            num_query_token, 512, #self.visual_encoder.num_features
-        )
+        self.llama_model = llama_model
+        if not "zidong" in llama_model:
+            self.visual_encoder, self.ln_vision = self.init_vision_encoder(
+                img_size, drop_path_rate, use_grad_checkpoint, vit_precision
+            )
+            if freeze_vit:
+                for name, param in self.visual_encoder.named_parameters():
+                    param.requires_grad = False               
+                self.visual_encoder = self.visual_encoder.eval()
+                self.visual_encoder.train = disabled_train
+                logging.info("freeze vision encoder")
+
+            self.Qformer, self.query_tokens = self.init_Qformer(
+                num_query_token, self.visual_encoder.num_features
+            )
+        else:
+            self.Qformer, self.query_tokens = self.init_Qformer(
+                num_query_token, 512, #self.visual_encoder.num_features
+            )
+
         self.Qformer.cls = None
         self.Qformer.bert.embeddings.word_embeddings = None
         self.Qformer.bert.embeddings.position_embeddings = None
@@ -130,9 +154,11 @@ class Blip2LLaMA(Blip2Base):
             layer.intermediate = None
 
         # Notice(Jing): 呼应L47的注释， 暂时用本地的LLAMA模型，修改了bug了，之后可以考虑替换成Huggingface上的
-        # llama_model = "/data2/shij/llama/llama-7b-hf"
+        # llama_model = "/data/shij/llama/zidongv2/step1000_v2"
         logging.info("load LLAMA model:{}".format(llama_model))
         self.llama_tokenizer = AutoTokenizer.from_pretrained(llama_model)
+        # self.llama_tokenizer = AutoTokenizer.from_pretrained('/data/shij/llama/zidongv2/step1000_v2')
+        # self.vit = AutoTokenizer.from_pretrained('/data/shij/llama/vicuna-13b')
         self.llama_model = AutoModelForCausalLM.from_pretrained(llama_model)
         self.llama_tokenizer.pad_token_id = 0 # 这里不太规范，tokenizer的设置里没有，先加到这里吧
 
@@ -164,7 +190,7 @@ class Blip2LLaMA(Blip2Base):
         # self.max_txt_len = max_txt_len
         self.max_txt_len = 240
         self.prompt = prompt
-        prompt_tokens = self.llama_tokenizer(self.prompt, return_tensors="pt")
+        prompt_tokens = self.llama_tokenizer(self.prompt, return_tensors="pt", add_bos_token=False, add_eos_token=False, max_length=self.max_txt_len)
         self.prompt_length = prompt_tokens.attention_mask.sum(1)
 
     def forward(self, samples):
@@ -195,6 +221,9 @@ class Blip2LLaMA(Blip2Base):
             prompt_text = []
             for sample_text in samples["text_input"]:
                 # 如果是QA的text input，就用QA的prompt
+                # given_text.append("描述这段音乐。" + sample_text)
+                # prompt_text.append("描述这段音乐。")
+                # continue
                 if "<|||>" in sample_text:
                     ques_text = sample_text.split("<|||>")[0]
                     # if ques_text[-1] not in ["?", "？", "。", "!", "！", "…", "."]:
@@ -207,7 +236,8 @@ class Blip2LLaMA(Blip2Base):
                     temp_prompt = random.choice(prompts_list)
                     # temp_prompt = prompt_input.format(random.choice(prompts_list_new))
                     prompt_text.append(temp_prompt)
-                    given_text.append(temp_prompt + " " + sample_text)
+                    # given_text.append(temp_prompt + " " + sample_text)
+                    given_text.append(temp_prompt + sample_text)
             text = [t+'</s>' for t in given_text]
 
         llama_tokens = self.llama_tokenizer(
@@ -216,7 +246,11 @@ class Blip2LLaMA(Blip2Base):
             padding="longest",
             truncation=True,
             max_length=self.max_txt_len,
+            add_bos_token=False,
         ).to(image.device)
+
+        # if 1: # 强行去除开头的<s>
+        #     llama_tokens = {k:v[:,1:] for k,v in llama_tokens.items()}
 
         targets = llama_tokens.input_ids.masked_fill(
             llama_tokens.input_ids == self.llama_tokenizer.pad_token_id, -100
@@ -225,7 +259,7 @@ class Blip2LLaMA(Blip2Base):
             targets[:, : self.prompt_length] = -100  # do not apply loss to the prompt
         if prompt_text is not None:
             # 这里专门来处理我自己定义的prompt
-            prompt_lens = self.llama_tokenizer(prompt_text, padding="longest", return_tensors="pt").attention_mask.sum(1).tolist() # 
+            prompt_lens = self.llama_tokenizer(prompt_text, padding="longest", return_tensors="pt", add_bos_token=False).attention_mask.sum(1).tolist() # 
             for idx, length in enumerate(prompt_lens):
                 targets[idx, : length] = -100  # do not apply loss to the prompt
 
@@ -288,12 +322,12 @@ class Blip2LLaMA(Blip2Base):
         with torch.cuda.amp.autocast(
             enabled=(self.device != torch.device("cpu"))
         ):          
-            image_embeds = self.ln_vision(self.visual_encoder(image))
+            image_embeds = self.ln_vision(self.visual_encoder(image)) # 1,257, 1408
             image_atts = torch.ones(image_embeds.size()[:-1], dtype=torch.long).to(
                 image.device
             )
 
-            query_tokens = self.query_tokens.expand(image_embeds.shape[0], -1, -1)
+            query_tokens = self.query_tokens.expand(image_embeds.shape[0], -1, -1) # [1,32,768]
             query_output = self.Qformer.bert(
                 query_embeds=query_tokens,
                 encoder_hidden_states=image_embeds,
@@ -301,7 +335,7 @@ class Blip2LLaMA(Blip2Base):
                 return_dict=True,
             )
 
-            inputs_llama = self.llama_proj(query_output.last_hidden_state)
+            inputs_llama = self.llama_proj(query_output.last_hidden_state) # [1,32,4096]
             atts_llama = torch.ones(inputs_llama.size()[:-1], dtype=torch.long).to(image.device)
 
             if "prompt" in samples.keys():
@@ -324,8 +358,8 @@ class Blip2LLaMA(Blip2Base):
             prompt = [prompt] * image.size(0)
 
             llama_tokens = self.llama_tokenizer(prompt, return_tensors="pt").to(image.device)
-            input_ids = llama_tokens.input_ids
-            attention_mask = torch.cat([atts_llama, llama_tokens.attention_mask], dim=1)
+            input_ids = llama_tokens.input_ids # [1,5]
+            attention_mask = torch.cat([atts_llama, llama_tokens.attention_mask], dim=1) # [1,32+5]
 
             if use_nucleus_sampling:
                 query_embeds = inputs_llama.repeat_interleave(num_captions, dim=0)
@@ -336,7 +370,7 @@ class Blip2LLaMA(Blip2Base):
             device_type = "cuda" if "cuda" in str(self.device) else "cpu"
             with torch.amp.autocast(device_type=device_type, dtype=torch.bfloat16):
                 inputs_embeds = self.llama_model.model.embed_tokens(llama_tokens.input_ids)
-                inputs_embeds = torch.cat([inputs_llama, inputs_embeds], dim=1)
+                inputs_embeds = torch.cat([inputs_llama, inputs_embeds], dim=1) # [1,37.4096]
 
             outputs = self.llama_model.generate(
                 # input_ids=input_ids,
@@ -393,3 +427,115 @@ class Blip2LLaMA(Blip2Base):
         model.load_checkpoint_from_config(cfg)
 
         return model
+
+    @torch.no_grad()
+    def generate_audio(
+        self,
+        samples,
+        use_nucleus_sampling=False,
+        num_beams=5,
+        max_length=30,
+        min_length=1,
+        top_p=0.9,
+        repetition_penalty=1.0,
+        length_penalty=1.0,
+        num_captions=1,
+        temperature=1,
+        early_stopping=False,
+        temp_prompt=None,
+    ):
+        """
+        Args:
+            samples (dict): A dictionary containing the following keys:
+                - image (torch.Tensor): A tensor of shape (batch_size, 3, H, W)
+            use_nucleus_sampling (bool): Whether to use nucleus sampling. If False, use top-k sampling.
+            num_beams (int): Number of beams for beam search. 1 means no beam search.
+            max_length (int): The maximum length of the sequence to be generated.
+            min_length (int): The minimum length of the sequence to be generated.
+            top_p (float): The cumulative probability for nucleus sampling.
+            repetition_penalty (float): The parameter for repetition penalty. 1.0 means no penalty.
+            num_captions (int): Number of captions to be generated for each image.
+        Returns:
+            captions (list): A list of strings of length batch_size * num_captions.
+        """
+        image = samples["audio"]
+        with torch.cuda.amp.autocast(
+            enabled=(self.device != torch.device("cpu"))
+        ):          
+            # image_embeds = self.ln_vision(self.visual_encoder(image))
+            image_embeds = image
+            image_atts = torch.ones(image_embeds.size()[:-1], dtype=torch.long).to(
+                image.device
+            )
+
+            query_tokens = self.query_tokens.expand(image_embeds.shape[0], -1, -1)
+            query_output = self.Qformer.bert(
+                query_embeds=query_tokens,
+                encoder_hidden_states=image_embeds,
+                encoder_attention_mask=image_atts,
+                return_dict=True,
+            )
+
+            inputs_llama = self.llama_proj(query_output.last_hidden_state)
+            atts_llama = torch.ones(inputs_llama.size()[:-1], dtype=torch.long).to(image.device)
+
+            if "prompt" in samples.keys():
+                prompt = samples["prompt"]
+            else:
+                prompt = self.prompt
+
+            if temp_prompt == "skip": # 给部署的模型直接跳过去
+                pass
+            else:
+                if temp_prompt is None:
+                    prompt = "Question: What does this show? Answer:"
+                    # prompt = "Let's start a new dialogue. Tell me a joke. Answer: \n"
+                else:
+                    prompt = temp_prompt
+            # """
+            
+            print("Prompt:", prompt)
+
+            prompt = [prompt] * image.size(0)
+
+            llama_tokens = self.llama_tokenizer(prompt, return_tensors="pt", add_bos_token=False).to(image.device)
+            input_ids = llama_tokens.input_ids
+            attention_mask = torch.cat([atts_llama, llama_tokens.attention_mask], dim=1)
+
+            if use_nucleus_sampling:
+                query_embeds = inputs_llama.repeat_interleave(num_captions, dim=0)
+                num_beams = 1
+            else:
+                query_embeds = inputs_llama.repeat_interleave(num_beams, dim=0)
+
+            device_type = "cuda" if "cuda" in str(self.device) else "cpu"
+            with torch.amp.autocast(device_type=device_type, dtype=torch.bfloat16):
+                inputs_embeds = self.llama_model.model.embed_tokens(llama_tokens.input_ids)
+                inputs_embeds = torch.cat([inputs_llama, inputs_embeds], dim=1)
+
+            # import pdb; pdb.set_trace()
+            outputs = self.llama_model.generate(
+                # input_ids=input_ids,
+                # query_embeds=query_embeds,
+                inputs_embeds=inputs_embeds, # [1,42,5120]
+                attention_mask=attention_mask,
+                do_sample=use_nucleus_sampling,
+                top_p=top_p,
+                temperature=temperature,
+                num_beams=num_beams,
+                max_new_tokens=max_length,
+                min_length=min_length,
+                eos_token_id=self.eos_token_id,
+                repetition_penalty=repetition_penalty,
+                length_penalty=length_penalty,
+                num_return_sequences=num_captions,
+                early_stopping=early_stopping,
+            )
+
+            # import pdb; pdb.set_trace()
+            # Todo(jing): 是否加入并不一定的，只给Inputs_embeds的时候，输出不返回prompt的
+            # prompt_length = llama_tokens.input_ids.shape[1]
+            # output_text = self.llama_tokenizer.batch_decode(outputs[:, prompt_length:], skip_special_tokens=True)
+            output_text = self.llama_tokenizer.batch_decode(outputs, skip_special_tokens=True)
+            output_text = [text.strip() for text in output_text]
+            return output_text
