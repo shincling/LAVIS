@@ -15,7 +15,8 @@ datasets:
         train:
           url: "/data2/shij/data/Med2/raw_data/train_texts_with_id.json"
           # storage: music_cap/annotations/music_cap_train.json
-          storage: music_cap/annotations/music_cap_train_v0_1000.json
+          # storage: music_cap/annotations/music_cap_train_v0_1000.json
+          storage: music_cap/annotations/music_cap_train_v2_6000.json
         val:
           url: "/data2/shij/data/Med2/raw_data/train_texts_with_id.json"
           storage:  music_cap/annotations/music_cap_val.json
