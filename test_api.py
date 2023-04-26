@@ -13,6 +13,7 @@ from lavis.models import load_model_and_preprocess
 import soundfile as sf
 import time
 import random
+from transformers import AutoProcessor
 
 app = FlaskAPI(__name__)
 
@@ -63,6 +64,11 @@ def audio_file_reader(audio_path):
         audio_npy = np.pad(audio_npy, (0, 160000-audio_npy.shape[0]), 'constant')
     else:
         audio_npy = audio_npy[:160000]
+
+    
+    # audio_wav2vec_processor = AutoProcessor.from_pretrained("facebook/wav2vec2-base-960h")
+    audio_wav2vec_processor = AutoProcessor.from_pretrained("jonatasgrosman/wav2vec2-large-xlsr-53-english")
+    audio_npy = audio_wav2vec_processor(audio_npy, sampling_rate=16000, return_tensors="pt",)
     
     return audio_npy
 
@@ -104,9 +110,13 @@ model, vis_processors, _ = load_model_and_preprocess(
 
     # name="blip2_llama", model_type="pretrain_vicuna13b", is_eval=True, device=device, pre_model_path="/data/shij/codes/BLIP2/LAVIS/lavis/output/BLIP2/Pretrain_stage2_vicuna13b/20230414151/checkpoint_29.pth"
     # name="blip2_llama", model_type="pretrain_zidong13b-audio", is_eval=True, device=device, pre_model_path="/data/shij/codes/BLIP2/LAVIS/lavis/output/BLIP2/Pretrain_stage2_music/20230419023/checkpoint_9.pth"
-    # name="blip2_llama", model_type="pretrain_zidong13b-audio", is_eval=True, device=device, pre_model_path="/data/shij/codes/BLIP2/LAVIS/lavis/output/BLIP2/Pretrain_stage2_music/20230418124/checkpoint_49.pth"
+    # name="blip2_llama", model_type="pretrain_zidong13b-audio", is_eval=True, device=device, pre_model_path="/data/shij/codes/BLIP2/LAVIS/lavis/output/BLIP2/Pretrain_stage2_music/20230418024/checkpoint_49.pth"
     # name="blip2_llama", model_type="pretrain_zidong13b-audio", is_eval=True, device=device, pre_model_path="/data/shij/codes/BLIP2/LAVIS/lavis/output/BLIP2/Pretrain_stage2_music/20230419023/checkpoint_44.pth"
-    name="blip2_llama", model_type="pretrain_zidong13b-audio", is_eval=True, device=device, pre_model_path="/data/shij/codes/BLIP2/LAVIS/lavis/output/BLIP2/Pretrain_stage2_music/20230419181/checkpoint_94.pth"
+    # name="blip2_llama", model_type="pretrain_zidong13b-audio", is_eval=True, device=device, pre_model_path="/data/shij/codes/BLIP2/LAVIS/lavis/output/BLIP2/Pretrain_stage2_music/20230419181/checkpoint_9.pth"
+    # name="blip2_llama", model_type="pretrain_zidong13b-audio", is_eval=True, device=device, pre_model_path="/data/shij/codes/BLIP2/LAVIS/lavis/output/BLIP2/Pretrain_stage2_music/20230420184/checkpoint_84.pth"
+    # name="blip2_llama", model_type="pretrain_zidong13b-audio", is_eval=True, device=device, pre_model_path="/data/shij/codes/BLIP2/LAVIS/lavis/output/BLIP2/Pretrain_stage2_music/20230420184/checkpoint_129.pth"
+    # name="blip2_llama", model_type="pretrain_zidong13b-audio", is_eval=True, device=device, pre_model_path="/data/shij/codes/BLIP2/LAVIS/lavis/output/BLIP2/Pretrain_stage2_music/20230423225/checkpoint_84.pth"
+    name="blip2_llama", model_type="pretrain_zidong13b-audio", is_eval=True, device=device, pre_model_path="/data/shij/codes/BLIP2/LAVIS/lavis/output/BLIP2/Pretrain_stage2_music/20230425103/checkpoint_14.pth"
 
 )
 # del temp
@@ -172,10 +182,11 @@ def notes_list():
         return json.dumps(result_dict, ensure_ascii=False, indent=4)
 
 @app.route("/audio", methods=['GET', 'POST'])
-def audio_infer():
+def audio_infer(use_prefix_prompt=False):
     """
     List or create notes.
     """
+    infer_prompt = "指令： 给定上面的一段音乐，以下是一个描述任务的指令，请根据音乐相关的信息生成一个完成该指令的适当回复。\n\n 问题：{} \n\n 回答："
     if request.method == 'POST':
         data = request.data
         text = data.get('text', '')
@@ -187,9 +198,12 @@ def audio_infer():
         write_wave(audio_file_name, bytes2wav(given_audio))
         audio_file_npy = audio_file_reader(audio_file_name)
 
-        given_audio = vis_processors["eval"](audio_file_npy).unsqueeze(0).to(device)
+        # mel branch 
+        # given_audio = vis_processors["eval"](audio_file_npy).unsqueeze(0).to(device)
 
-        prompt = text
+        given_audio= audio_file_npy
+
+        prompt = text if not use_prefix_prompt else infer_prompt.format(text)
         # response = model.generate({"image": given_image, "prompt": prompt}, max_length=300, repetition_penalty=2.0, temp_prompt="skip", early_stopping=False)
         response = model.generate_audio({"audio": given_audio, "prompt": prompt}, max_length=320, repetition_penalty=2.5, temp_prompt="skip", early_stopping=True)
         response = response[0]

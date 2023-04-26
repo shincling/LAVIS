@@ -20,8 +20,15 @@ prompt_input =  (
     "Above is an medical image illustration of a patient, write a response that appropriately completes the following request."
     "\n\n Input:\n{}\n\n Response:"
 )
-    
 
+
+USE_PROMPT = True
+PROMPT_PREFIX = (
+    "以下是一个描述任务的指令，并配有一个提供详细上下文信息的输入。"
+    "请写一个完成该指令的适当回复。\n\n"
+    "### 指令:\n{}\n\n### 输入: 图像-[image_xxx]\n\n### 回复:"
+  )
+    
 prompts_list_new = [
     "Describe the image.",
     "Describe the preceding.",
@@ -48,11 +55,29 @@ prompts_list = [
     # "The description of the image is",
     "How is the situation in the image? Answer:",
 ]
-prompts_list = [
-    "描述这段音乐。回答：",
+
+prompts_list_image_cn = [
+    "生成给定图片的概况。",
+    "生成给定图片的标题。",
+    "这幅图像描述了什么？",
+    "为这幅图像生成概述。",
+    "为给定的图像生成标题。",
+    "描述给定图像的内容是什么？",
+    "根据给定的图像生成简要摘要。",
+    "通过分析给定的图像来生成标题。",
+    "请生成一份关于给定图像的概述。",
+    "使用自然语言生成为给定图像的简要描述。",
+    "请提供有关给定图像的简要信息。",
+    "为给定图像生成简洁的标题和概述。",
+    "请生成一份关于这幅图像的描述.",
+]
+
+prompts_list_music_cn = [
+    "生成这段音乐的概述。",
     "描述这段音乐。",
+    "请描述这段音乐。",
+    "请描述之前给定的音乐材料。",
     "请描述之前给定的材料。",
-    "请描述之前给定的材料。回答：",
     "概括这段音乐的内容。",
     "这段音乐是关于什么的？",
     "这段音乐的情况是什么？",
@@ -62,7 +87,7 @@ prompts_list = [
     "请描述之前给定的材料，让读者能够清晰地理解它所涉及的主题和背景。",
     "请以简明扼要的语言概括这段音乐的内容和主旨，让读者能够快速了解它的特点和风格。",
     "这段音乐片段的信息有哪些？请用你自己的话进行描述，并解释它们对你的意义。",
-    "请描述这段音乐所呈现的场景和情境。回答：",
+    "请描述这段音乐所呈现的场景和情境。",
 ]
 
 
@@ -74,6 +99,14 @@ prompts_list_question = [
     # "Question: {}Answer:",
     # "{}",
     # "{}\n",
+]
+
+# 适合已经有“回答：”这种的
+prompts_list_question = [
+    "{}\n\n ###",
+    "{} \n\n",
+    "{}",
+    "{}\n",
 ]
 
 # prompts_list = [
@@ -120,6 +153,7 @@ class Blip2LLaMA(Blip2Base):
         llama_model="decapoda-research/llama-7b-hf", # Notice: the series of llama-xb-hf gets bugs (https://huggingface.co/decapoda-research/llama-7b-hf/discussions/9), waiting for fix 202303018
         prompt="",
         max_txt_len=320, # Notice(Jing): the max_txt_len is 320 for llama-7b-hf
+        modality="image",
     ):
         super().__init__()
 
@@ -127,7 +161,9 @@ class Blip2LLaMA(Blip2Base):
 
 
         self.llama_model = llama_model
-        if not "zidong" in llama_model:
+        self.modality = modality
+        logging.info(f"modality: {self.modality}")
+        if modality == "image":
             self.visual_encoder, self.ln_vision = self.init_vision_encoder(
                 img_size, drop_path_rate, use_grad_checkpoint, vit_precision
             )
@@ -141,10 +177,18 @@ class Blip2LLaMA(Blip2Base):
             self.Qformer, self.query_tokens = self.init_Qformer(
                 num_query_token, self.visual_encoder.num_features
             )
-        else:
+        elif modality == "audio":
+            self.audio_encoder, _ = self.init_audio_encoder()
+            if freeze_vit:
+                for name, param in self.audio_encoder.named_parameters():
+                    param.requires_grad = False               
+                self.audio_encoder = self.audio_encoder.eval()
+                logging.info("freeze audio encoder")
             self.Qformer, self.query_tokens = self.init_Qformer(
-                num_query_token, 512, #self.visual_encoder.num_features
+                num_query_token, 1024, #768 # 512, #self.visual_encoder.num_features
             )
+        else:
+            raise NotImplementedError("modality {} not implemented".format(modality))
 
         self.Qformer.cls = None
         self.Qformer.bert.embeddings.word_embeddings = None
@@ -194,10 +238,17 @@ class Blip2LLaMA(Blip2Base):
         self.prompt_length = prompt_tokens.attention_mask.sum(1)
 
     def forward(self, samples):
-        # image = samples["image"]
-        # image_embeds = self.ln_vision(self.visual_encoder(image))
-        image = samples["audio"]
-        image_embeds = image
+        if self.modality == "image":
+            image = samples["image"]
+            image_embeds = self.ln_vision(self.visual_encoder(image))
+        elif self.modality == "audio":
+        # image_embeds = image
+            audio = samples["audio"]
+            audio_embeds = self.audio_encoder(input_values=audio['input_values'].squeeze().to(self.audio_encoder.device), return_dict=True)
+            audio_embeds = audio_embeds.last_hidden_state
+            image, image_embeds = audio_embeds, audio_embeds
+        else:
+            raise NotImplementedError("modality {} not implemented".format(self.modality))
 
         image_atts = torch.ones(image_embeds.size()[:-1], dtype=torch.long).to(
             image.device
@@ -216,14 +267,22 @@ class Blip2LLaMA(Blip2Base):
 
         self.llama_tokenizer.padding_side = "right"
 
-        if prompts_list is not None:
+        if USE_PROMPT:
             given_text = []
             prompt_text = []
+            # decide which prompt to use
+            if self.modality == "image":
+                prompts_list = prompts_list_image_cn
+            elif self.modality == "audio":
+                prompts_list = prompts_list_music_cn
+
             for sample_text in samples["text_input"]:
                 # 如果是QA的text input，就用QA的prompt
                 # given_text.append("描述这段音乐。" + sample_text)
                 # prompt_text.append("描述这段音乐。")
                 # continue
+
+                # 特殊符号，一般用来分割问题和答案
                 if "<|||>" in sample_text:
                     ques_text = sample_text.split("<|||>")[0]
                     # if ques_text[-1] not in ["?", "？", "。", "!", "！", "…", "."]:
@@ -232,8 +291,11 @@ class Blip2LLaMA(Blip2Base):
                     # temp_prompt = prompt_input.format(ques_text)
                     prompt_text.append(temp_prompt)
                     given_text.append(temp_prompt + " " + sample_text.split("<|||>")[1])
+
+                # 正常caption描述类文本
                 else: 
-                    temp_prompt = random.choice(prompts_list)
+                    # temp_prompt = random.choice(prompts_list)
+                    temp_prompt = PROMPT_PREFIX.format(random.choice(prompts_list))
                     # temp_prompt = prompt_input.format(random.choice(prompts_list_new))
                     prompt_text.append(temp_prompt)
                     # given_text.append(temp_prompt + " " + sample_text)
@@ -413,6 +475,8 @@ class Blip2LLaMA(Blip2Base):
         prompt = cfg.get("prompt", "")
         max_txt_len = cfg.get("max_txt_len", 32)
 
+        modality = cfg.get("modality", "image")
+
         model = cls(
             img_size=img_size,
             drop_path_rate=drop_path_rate,
@@ -423,6 +487,7 @@ class Blip2LLaMA(Blip2Base):
             llama_model=llama_model,
             prompt=prompt,
             max_txt_len=max_txt_len,
+            modality=modality,
         )
         model.load_checkpoint_from_config(cfg)
 
@@ -458,7 +523,18 @@ class Blip2LLaMA(Blip2Base):
         Returns:
             captions (list): A list of strings of length batch_size * num_captions.
         """
-        image = samples["audio"]
+        # The mel branch
+        # image = samples["audio"]
+
+        # The wave2vec branch
+        audio = samples["audio"]
+        print('audio: ', audio)
+        print('audio shape:',audio['input_values'].shape)
+        
+        audio_embeds = self.audio_encoder(input_values=audio['input_values'].to(self.audio_encoder.device), return_dict=True)
+        audio_embeds = audio_embeds.last_hidden_state
+        image, image_embeds = audio_embeds, audio_embeds
+
         with torch.cuda.amp.autocast(
             enabled=(self.device != torch.device("cpu"))
         ):          
