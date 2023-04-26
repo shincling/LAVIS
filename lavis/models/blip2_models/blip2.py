@@ -58,6 +58,16 @@ class Blip2Base(BaseModel):
         ln_vision = LayerNorm(visual_encoder.num_features)
         return visual_encoder, ln_vision
 
+    @classmethod
+    def init_audio_encoder(
+        cls, wav2vec_path = "facebook/wav2vec2-base-960h"
+    ):
+        from transformers import Wav2Vec2Model
+        # audio_encoder = Wav2Vec2Model.from_pretrained("facebook/wav2vec2-base-960h")
+        audio_encoder = Wav2Vec2Model.from_pretrained("jonatasgrosman/wav2vec2-large-xlsr-53-english")
+        audio_encoder.freeze_feature_extractor()
+        return audio_encoder, None
+
     def load_from_pretrained(self, url_or_filename):
         # import pdb; pdb.set_trace()
         if is_url(url_or_filename):

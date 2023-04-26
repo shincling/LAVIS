@@ -30,6 +30,8 @@ model:
 
   # generation configs
   prompt: ""
+  modality: "audio"
+  max_txt_len: 256
 
 
 preprocess:

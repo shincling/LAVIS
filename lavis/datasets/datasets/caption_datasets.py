@@ -13,6 +13,8 @@ from PIL import Image
 import soundfile as sf
 import numpy as np
 
+from transformers import AutoProcessor
+
 
 class __DisplMixin:
     def displ_item(self, index):
@@ -130,6 +132,8 @@ class AudioCaptionDataset(BaseDataset, __DisplMixin):
         self.audio_processor = self.vis_processor
         self.audio_root = self.vis_root
 
+        # self.audio_wav2vec_processor = AutoProcessor.from_pretrained("facebook/wav2vec2-base-960h")
+        self.audio_wav2vec_processor = AutoProcessor.from_pretrained("jonatasgrosman/wav2vec2-large-xlsr-53-english")
         self.audio_ids = {}
         n = 0
         for ann in self.annotation:
@@ -156,7 +160,9 @@ class AudioCaptionDataset(BaseDataset, __DisplMixin):
         else:
             audio_npy = audio_npy[:160000]
 
-        audio = self.audio_processor(audio_npy)
+        # audio = self.audio_processor(audio_npy)
+        audio = self.audio_wav2vec_processor(audio_npy, sampling_rate=16000, return_tensors="pt",)
+
         caption = self.text_processor(ann["caption"])
 
         return {
