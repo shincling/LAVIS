@@ -62,7 +62,7 @@ class Blip2Base(BaseModel):
     def init_audio_encoder(
         cls, wav2vec_path = "facebook/wav2vec2-base-960h"
     ):
-        from transformers import Wav2Vec2Model
+        from transformers import AutoProcessor, Wav2Vec2Model
         # audio_encoder = Wav2Vec2Model.from_pretrained("facebook/wav2vec2-base-960h")
         audio_encoder = Wav2Vec2Model.from_pretrained("jonatasgrosman/wav2vec2-large-xlsr-53-english")
         audio_encoder.freeze_feature_extractor()

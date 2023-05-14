@@ -563,9 +563,15 @@ class Blip2Qformer_audio(Blip2Base):
         #     self.visual_encoder = self.visual_encoder.eval()
         #     self.visual_encoder.train = disabled_train            
         #     logging.info("freeze vision encoder")
+        self.audio_encoder, _ = self.init_audio_encoder()
+
+        if freeze_vit:
+            for name, param in self.audio_encoder.named_parameters():
+                param.requires_grad = False               
+            logging.info("freeze audio encoder")
 
         self.Qformer, self.query_tokens = self.init_Qformer(
-            num_query_token, 64 # Notice(Jing):lavis/processors/audio_processors.py L44,语音特征的stft的维度
+            num_query_token, 1024, #512 # Notice(Jing):lavis/processors/audio_processors.py L44,语音特征的stft的维度
         )
         self.Qformer.resize_token_embeddings(len(self.tokenizer))
         state_dict = self.Qformer.state_dict()
@@ -589,7 +595,10 @@ class Blip2Qformer_audio(Blip2Base):
             audio = samples["audio"] # 
         text = samples["text_input"]
         
-        audio_embeds = audio
+        audio_embeds = self.audio_encoder(input_values=audio['input_values'].squeeze().to(self.audio_encoder.device), return_dict=True)
+        audio_embeds = audio_embeds.last_hidden_state
+
+        audio = audio_embeds
         image_atts = torch.ones(audio_embeds.size()[:-1], dtype=torch.long).to(
             audio.device
         )

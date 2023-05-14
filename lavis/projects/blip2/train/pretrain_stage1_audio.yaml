@@ -17,7 +17,7 @@ datasets:
         train:
           name: "blip2_audio_train"
           max_frames: 160000
-          n_mel: 64
+          n_mel: 512
           # image_size: 224
     text_processor:
         train:
