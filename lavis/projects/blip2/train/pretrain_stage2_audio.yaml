@@ -12,14 +12,9 @@ model:
   # intialize stage 2 pretraining from stage 1 pretrained model
   # pretrained: "https://storage.googleapis.com/sfr-vision-language-research/LAVIS/models/BLIP2/blip2_pretrained.pth"
   # pretrained: "/data2/shij/codes/BLIP2/LAVIS/lavis/output/BLIP2/Pretrain_stage1/20230409090/checkpoint_399.pth" # Stage1 重新训练
-<<<<<<< Updated upstream
   # pretrained: "/data/shij/codes/BLIP2/LAVIS/lavis/output/BLIP2/Pretrain_stage1_music/20230415062/checkpoint_449.pth"
   # pretrained: "/data/shij/codes/BLIP2/LAVIS/lavis/output/BLIP2/Pretrain_stage1_music/20230417172/checkpoint_179.pth"
   pretrained: "/data/shij/codes/BLIP2/LAVIS/lavis/output/BLIP2/Pretrain_stage1_music/20230418024/checkpoint_499.pth"
-=======
-
-  pretrained: "/data2/shij/codes/BLIP2/LAVIS/lavis/output/BLIP2/Pretrain_stage1_music/20230415062/checkpoint_449.pth" # wav2vec base
->>>>>>> Stashed changes
 
   freeze_vit: True
   # freeze_vit: False

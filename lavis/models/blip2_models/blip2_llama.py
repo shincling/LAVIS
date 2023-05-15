@@ -160,7 +160,6 @@ class Blip2LLaMA(Blip2Base):
         self.tokenizer = self.init_tokenizer()
 
 
-<<<<<<< Updated upstream
         self.llama_model = llama_model
         self.modality = modality
         logging.info(f"modality: {self.modality}")
@@ -191,19 +190,6 @@ class Blip2LLaMA(Blip2Base):
         else:
             raise NotImplementedError("modality {} not implemented".format(modality))
 
-=======
-        self.audio_encoder, _ = self.init_audio_encoder()
-
-        if freeze_vit:
-            for name, param in self.audio_encoder.named_parameters():
-                param.requires_grad = False               
-            self.audio_encoder = self.audio_encoder.eval()
-            logging.info("freeze audio encoder")
-
-        self.Qformer, self.query_tokens = self.init_Qformer(
-            num_query_token, 1024 #768 #512, #self.visual_encoder.num_features
-        )
->>>>>>> Stashed changes
         self.Qformer.cls = None
         self.Qformer.bert.embeddings.word_embeddings = None
         self.Qformer.bert.embeddings.position_embeddings = None

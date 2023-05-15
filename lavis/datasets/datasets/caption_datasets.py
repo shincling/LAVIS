@@ -14,10 +14,6 @@ import soundfile as sf
 import numpy as np
 
 from transformers import AutoProcessor
-<<<<<<< Updated upstream
-
-=======
->>>>>>> Stashed changes
 
 class __DisplMixin:
     def displ_item(self, index):
@@ -165,17 +161,8 @@ class AudioCaptionDataset(BaseDataset, __DisplMixin):
         else:
             audio_npy = audio_npy[:160000]
 
-<<<<<<< Updated upstream
         # audio = self.audio_processor(audio_npy)
         audio = self.audio_wav2vec_processor(audio_npy, sampling_rate=16000, return_tensors="pt",)
-=======
-        # audio = self.audio_processor(audio_npy) 
-
-        audio = self.audio_wav2vec_processor(audio_npy, sampling_rate=16000, return_tensors="pt",)
-        # audio = self.wav2vec_model(**audio).last_hidden_state
-        # print('Warning: we use wav2vec2_processor to process audio!!!!!!')
-        # print('audio with w2v feats shape:', audio["input_values"].shape)
->>>>>>> Stashed changes
 
         caption = self.text_processor(ann["caption"])
 
