@@ -4,7 +4,7 @@
  # For full license text, see the LICENSE file in the repo root or https://opensource.org/licenses/BSD-3-Clause
 
 datasets:
-  audio_caption: # name of the dataset builder
+  signal_caption: # name of the dataset builder
     dataset_card: dataset_card/coco_caption.md
     # data_dir: ${env.data_dir}/datasets
     data_type: images # [images|videos|features]
@@ -14,15 +14,14 @@ datasets:
       annotations:
         train:
           url: "/data2/shij/data/Med2/raw_data/train_texts_with_id.json"
-          # storage: music_cap/annotations/music_cap_train.json
-          # storage: music_cap/annotations/music_cap_train_v0_1000.json
-          # storage: music_cap/annotations/music_cap_train_v2_6000.json
-          storage: music_cap/annotations/music_cap_train_v4_6000song_11000qa.json
+          storage: signal_cap/annotations/LDData_caption_4k_stage1_v0.json
+          # storage: signal_cap/annotations/LDData_instruct_4kcap_4kprompt_stage2_v1.json
+          # storage: signal_cap/annotations/LDData_instruct_4kcap_4kprompt_stage2_onlyq_v2.json
         val:
           url: "/data2/shij/data/Med2/raw_data/train_texts_with_id.json"
-          storage:  music_cap/annotations/music_cap_val.json
+          storage:  signal_cap/annotations/music_cap_val.json
         test:
           url: https://storage.googleapis.com/sfr-vision-language-research/datasets/coco_karpathy_val.json
-          storage: music_cap/annotations/music_cap_test.json
+          storage: signal_cap/annotations/music_cap_test.json
       images:
-        storage: music_cap/audios/
+        storage: signal_cap/wav-16k-10s_all/
