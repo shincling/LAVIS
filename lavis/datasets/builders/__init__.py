@@ -12,6 +12,7 @@ from lavis.datasets.builders.caption_builder import (
     MSVDCapBuilder,
     VATEXCapBuilder,
 )
+from lavis.datasets.builders.image_dialog_builder_custom import IMAGEDialogBuilder
 from lavis.datasets.builders.image_text_pair_builder import (
     ConceptualCaption12MBuilder,
     ConceptualCaption3MBuilder,
@@ -63,6 +64,7 @@ __all__ = [
     "VGCaptionBuilder",
     "VGVQABuilder",
     "AVSDDialBuilder",
+    "IMAGEDialogBuilder"
 ]
 
 
