@@ -17,6 +17,8 @@ from transformers import AutoProcessor
 import sys
 import torchaudio
 
+os.environ['CURL_CA_BUNDLE'] = ''
+
 app = FlaskAPI(__name__)
 
 modal_type = sys.argv[1]
@@ -30,6 +32,11 @@ translation_api_en2cn_pro = 'http://172.18.30.134:5118/aliyuntranslate_en/'
 # print(requests.post(translation_api_en2an_genel, data={'text': pred_text}).json()['Data']['Translated'])
 
 audio_wav2vec_processor = AutoProcessor.from_pretrained("jonatasgrosman/wav2vec2-large-xlsr-53-english")
+# audio_wav2vec_processor = AutoProcessor.from_pretrained("/data/shij/data/audio_cap/wav2vec2-large-xlsr-53-english")
+audio_wav2vec_processor = AutoProcessor.from_pretrained("/data/shij/data/audio_cap/wav2vec2-large-xlsr-53-english")
+# audio_wav2vec_processor = AutoProcessor.from_pretrained("jonatasgrosman/wav2vec2-large-xlsr-53-english", cache_dir="/data/shij/.cache/huggingface/hub/models--jonatasgrosman--wav2vec2-large-xlsr-53-english/")
+# audio_wav2vec_processor = AutoProcessor.from_pretrained("jonatasgrosman/wav2vec2-large-xlsr-53-english")
+# import pdb; pdb.set_trace()
 
 def base64_to_wavfile(base64_str):
     wav_file = open("temp.wav", "wb")
@@ -73,6 +80,7 @@ def audio_file_reader(audio_path):
 
     
     # audio_wav2vec_processor = AutoProcessor.from_pretrained("facebook/wav2vec2-base-960h")
+    # audio_wav2vec_processor = AutoProcessor.from_pretrained("jonatasgrosman/wav2vec2-large-xlsr-53-english")
     audio_npy = audio_wav2vec_processor(audio_npy, sampling_rate=16000, return_tensors="pt",)
     
     return audio_npy
@@ -126,13 +134,22 @@ if modal_type == 'music':
 
         # name="blip2_chatglm", model_type="pretrain_chatglm6b-music", is_eval=True, device=device, pre_model_path="/data2/shij/codes/BLIP2/LAVIS/lavis/output/BLIP2/Pretrain_stage2_music_glm6b/20230514120/checkpoint_29.pth"
         name="blip2_chatglm", model_type="pretrain_chatglm6b-music", is_eval=True, device=device, pre_model_path="/data2/shij/codes/BLIP2/LAVIS/lavis/output/BLIP2/Pretrain_stage2_music_glm6b/20230516083/checkpoint_29.pth"
-
-        # name="blip2_chatglm", model_type="pretrain_chatglm6b", is_eval=True, device=device, pre_model_path="/data2/shij/lavis_glm/lavis/checkpoints/checkpoint_4.pth"
-)
+        )
 
 if modal_type =="image":
     model, vis_processors, _ = load_model_and_preprocess(name="blip2_chatglm", model_type="pretrain_chatglm6b",\
                                                           is_eval=True, device=device, pre_model_path="/data2/shij/lavis_glm/lavis/checkpoints/checkpoint_4.pth")
+    # model, vis_processors, _ = load_model_and_preprocess(
+    # # 通用Image與所裏LLM
+    # # name="blip2_llama", model_type="pretrain_zidong13b", is_eval=True, device=device, pre_model_path="/data/shij/codes/BLIP2/LAVIS/lavis/output/BLIP2/Pretrain_stage2_wukong/20230427144/checkpoint_8.pth"
+    # # name="blip2_llama", model_type="pretrain_zidong13b", is_eval=True, device=device, pre_model_path="/data/shij/codes/BLIP2/LAVIS/lavis/output/BLIP2/Pretrain_stage2_wukong/20230505181/checkpoint_29.pth"
+
+    # # Baichuan-7B image
+    # # name="blip2_llama", model_type="pretrain_baichuan7b", is_eval=True, device=device, pre_model_path="/data/shij/codes/BLIP2/LAVIS/lavis/output/BLIP2/Pretrain_stage2_image_baichuan7b/20230629100/checkpoint_0.pth"
+    # # name="blip2_llama", model_type="pretrain_baichuan7b", is_eval=True, device=device, pre_model_path="/data/shij/codes/BLIP2/LAVIS/lavis/output/BLIP2/Pretrain_stage2_image_baichuan7b/20230629181/checkpoint_0.pth"
+    # # name="blip2_llama", model_type="pretrain_baichuan7b", is_eval=True, device=device, pre_model_path="/data/shij/codes/BLIP2/LAVIS/lavis/output/BLIP2/Pretrain_stage2_image_baichuan7b/20230630222/checkpoint_0.pth"
+    # name="blip2_llama", model_type="pretrain_baichuan7b", is_eval=True, device=device, pre_model_path="/data/shij/codes/BLIP2/LAVIS/lavis/output/BLIP2/Pretrain_stage2_image_baichuan7b/20230703164/checkpoint_0.pth"
+
 if modal_type =="image_med":
     model, vis_processors, _ = load_model_and_preprocess(name="blip2_chatglm", model_type="pretrain_chatglm6b_image_dialog_ft",\
                                                         #   is_eval=True, device=device, pre_model_path="/data2/shij/codes/BLIP2/LAVIS/lavis/output/BLIP2/Pretrain_stage2_med_image_cap_ft_glm6b/20230613090/checkpoint_94.pth")
@@ -178,10 +195,12 @@ def example():
     return {'hello': 'world'}
 
 @app.route("/", methods=['GET', 'POST'])
-def notes_list():
+def notes_list(is_trans=False):
     """
     List or create notes.
     """
+    prefix_str = "A chat between a curious user and an artificial intelligence assistant. The assistant gives helpful, detailed, and polite answers to the user's questions.\nUSER:{} ASSISTANT:"
+    # prefix_str = ""
     if request.method == 'POST':
         data = request.data
         text = data.get('text', '')
@@ -190,11 +209,15 @@ def notes_list():
         given_image = base64_pil(given_image).convert("RGB")
         given_image = vis_processors["eval"](given_image).unsqueeze(0).to(device)
 
-        input_text_en = requests.post(translation_api_cn2en_genel, data={'text': text}).json()['Data']['Translated']
 
+        input_text_en = requests.post(translation_api_cn2en_genel, data={'text': text}).json()['Data']['Translated']
         input_text_en = input_text_en.replace("Problem:", "Question:").strip()
-        prompt = input_text_en
+        prompt = input_text_en if is_trans else text
+        if prefix_str:
+            prompt = prefix_str.format(prompt)
         # response = model.generate({"image": given_image, "prompt": prompt}, max_length=300, repetition_penalty=2.0, temp_prompt="skip", early_stopping=False)
+        model.train()
+        # response = model.generate({"image": given_image, "prompt": prompt}, max_length=320, repetition_penalty=2.5, temp_prompt="skip", early_stopping=True)
         response = model.generate({"image": given_image, "prompt": prompt}, max_length=320, repetition_penalty=2.5, temp_prompt="skip", early_stopping=True)
         response = response[0]
 
@@ -206,7 +229,10 @@ def notes_list():
             response = response[:-2]
         print("Response: ", response)
         # response = model.generate({"image": given_image, "prompt": prompt}, max_length=300, temp_prompt="skip")
-        response_trans = requests.post(translation_api_en2cn_genel, data={'text': response}).json()['Data']['Translated']
+        if prompt == input_text_en and is_trans:
+            response_trans = requests.post(translation_api_en2cn_genel, data={'text': response}).json()['Data']['Translated']
+        else:
+            response_trans = response
 
         result_dict = {
             "input_text": text,
@@ -285,7 +311,7 @@ def text_infer():
         return json.dumps(result_dict, ensure_ascii=False, indent=4)
 
 @app.route("/audio", methods=['GET', 'POST'])
-def audio_infer(use_prefix_prompt=False):
+def audio_infer(use_prefix_prompt=True):
     """
     List or create notes.
     """
@@ -296,10 +322,14 @@ def audio_infer(use_prefix_prompt=False):
 
         given_audio = data.get('audio', '')
 
-        formatted_time = time.strftime("%Y-%m-%d-%H-%M-%S", time.localtime()) + str(random.randint(0, 1000000))
-        audio_file_name = "/data/shij/codes/BLIP2/temp_stuff/test_" + formatted_time + ".wav"
-        write_wave(audio_file_name, bytes2wav(given_audio))
-        audio_file_npy = audio_file_reader(audio_file_name)
+        if given_audio.endswith(".wav") and given_audio in os.listdir("/data/shij/codes/BLIP2/LAVIS/music_samples/"):
+            print("Use the saved audio file: ", given_audio)
+            audio_file_npy = audio_file_reader("/data/shij/codes/BLIP2/LAVIS/music_samples/" + given_audio)
+        else:
+            formatted_time = time.strftime("%Y-%m-%d-%H-%M-%S", time.localtime()) + str(random.randint(0, 1000000))
+            audio_file_name = "/data/shij/codes/BLIP2/temp_stuff/test_" + formatted_time + ".wav"
+            write_wave(audio_file_name, bytes2wav(given_audio))
+            audio_file_npy = audio_file_reader(audio_file_name)
 
         # mel branch 
         # given_audio = vis_processors["eval"](audio_file_npy).unsqueeze(0).to(device)
