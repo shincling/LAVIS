@@ -48,6 +48,24 @@ class COCOCapBuilder(BaseDatasetBuilder):
         "default": "configs/datasets/coco/defaults_wukong.yaml",
     }
 
+@registry.register_builder("med_caption_ins")
+class COCOCapBuilder(BaseDatasetBuilder):
+    train_dataset_cls = COCOCapDataset
+    eval_dataset_cls = COCOCapEvalDataset
+
+    DATASET_CONFIG_DICT = {
+        "default": "configs/datasets/coco/med0612_ft.yaml"
+    }
+
+@registry.register_builder("aircraft_caption_ins")
+class COCOCapBuilder(BaseDatasetBuilder):
+    train_dataset_cls = COCOCapDataset
+    eval_dataset_cls = COCOCapEvalDataset
+
+    DATASET_CONFIG_DICT = {
+        "default": "configs/datasets/coco/aircraft_ft.yaml"
+    }
+
 @registry.register_builder("audio_caption")
 class AudioCapBuilder(BaseDatasetBuilder):
     train_dataset_cls = AudioCapDataset
@@ -55,7 +73,16 @@ class AudioCapBuilder(BaseDatasetBuilder):
 
     DATASET_CONFIG_DICT = {
         "default": "configs/datasets/music_caption/defaults_music.yaml",
-    }
+   }
+
+@registry.register_builder("signal_caption")
+class SignalCapBuilder(BaseDatasetBuilder):
+    train_dataset_cls = AudioCapDataset
+    eval_dataset_cls = AudioCapDataset # TODO(jing): change this to AudioCapEvalDataset
+
+    DATASET_CONFIG_DICT = {
+        "default":"configs/datasets/music_caption/defaults_signal.yaml",
+   }
 
 
 @registry.register_builder("nocaps")
