@@ -1,0 +1,52 @@
+ # Copyright (c) 2022, salesforce.com, inc.
+ # All rights reserved.
+ # SPDX-License-Identifier: BSD-3-Clause
+ # For full license text, see the LICENSE file in the repo root or https://opensource.org/licenses/BSD-3-Clause
+
+model:
+  arch: pretrain_opt2.7b
+  load_finetuned: False
+
+  # pretrained: "https://storage.googleapis.com/sfr-vision-language-research/LAVIS/models/BLIP2/blip2_pretrained_opt2.7b.pth"
+  finetuned: ""
+  # pretrained: "/raid/cfl/cn_pretraining_multi_dialog/LAVIS/lavis/output/BLIP2/Pretrain_stage2/20230316114/checkpoint_1.pth"
+  pretrained: "/raid/cfl/cn_pretraining_multi_dialog/LAVIS/lavis/output/BLIP2/Pretrain_stage2_1400w/20230405133/checkpoint_4.pth"
+  # pretrained: /data2/shij/codes/BLIP2/LAVIS/lavis/output/BLIP2/Pretrain_stage2_med_image_cap_ft_glm6b/20230613090/checkpoint_99.pth
+  # pretrained: "/raid/cfl/cn_pretraining_multi_dialog/LAVIS/lavis/output/BLIP2/Pretrain_stage2/20230316114/checkpoint_1.pth"
+  # pretrained: "/raid/cfl/cn_pretraining_multi_dialog/LAVIS/lavis/output/BLIP2/Pretrain_stage2/20230227160/checkpoint_19.pth"
+  # vit encoder
+  image_size: 224
+  drop_path_rate: 0
+  use_grad_checkpoint: False
+  vit_precision: "fp16" # "fp16" 
+  freeze_vit: True
+  max_txt_len: 256
+  # freeze_qformer: True
+
+  # Q-Former
+  num_query_token: 32
+
+  # OPT
+  # opt_model: "facebook/opt-2.7b"
+  opt_model: "/data2/shij/llama/chatglm6b"
+  # opt_model: "/data1/jing/checkpoints_for_blip2/chatglm_ft/checkpoint-2400/" # 165全量微调过的心内和神外的模型，上图像直接做微调
+
+  # generation configs
+  prompt: ""
+
+
+preprocess:
+    vis_processor:
+        train:
+          name: "blip_image_train"
+          image_size: 224
+        eval:
+          name: "blip_image_eval"
+          image_size: 224
+    text_processor:
+        train:
+          name: "blip_caption"
+          max_words: 256
+        eval:
+          name: "blip_caption"
+          max_words: 256

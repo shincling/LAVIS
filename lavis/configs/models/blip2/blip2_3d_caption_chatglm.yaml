@@ -1,0 +1,51 @@
+model:
+  arch: blip2_chatglm
+  load_finetuned: False 
+  load_pretrained: True      # 目前为了调试设为了False 实际使用时要设为True 而且要为下面的 pretrained 参数赋值
+  # pretrained: "/public/public_data/3DLLM/pretrained_model/stage2/cap_and_structure_v3_chatglm.pth"
+  # finetuned: "/public/public_data/3DLLM/pretrained_model/stage2/cap_and_structure_v3_chatglm.pth"
+  pretrained: "/data2/shij/data/cloud_cap/model/stage2/cap_and_structure_v3_chatglm.pth"
+  finetuned: "/data2/shij/data/cloud_cap/model/stage2/cap_and_structure_v3_chatglm.pth"
+  
+  # point transformer encoder
+  # point_cloud_encoder_model: "point_transformer"
+  # point_cloud_encoder_model_path: "/public/home/mengqi_rong8/CheckPoint/Combine_final/model/resave_best.pth"
+  # point_clund_encoder_model_path: "/data2/shij/data/cloud_cap/model/point_transformer/resave_best.pth"
+  # point_cloud_encoder_model_path : "/public/home/mengqi_rong8/CheckPoint/S3DIS/model/resave_best.pth"
+  drop_path_rate: 0
+  use_grad_checkpoint: False
+  # freeze_cloud_encoder: True
+  vit_precesion: "fp16"
+  freeze_vit: True
+
+  # Q-Former
+  num_query_token: 32
+  # qformer_encoder_layer: 12
+
+  # OPT
+  # opt_model: "facebook/opt-2.7b"
+  opt_model: "/data2/shij/llama/chatglm6b"
+
+  # generation configs
+  prompt: ""
+  modality: "cloud"
+
+
+# 这里也有vis_processor 和 text_processor, 但是不要和数据集配置里的那两个搞混了
+# 这两个的作用是如果想要单独使用模型，也就是输入一个点云+文字，输出一段文字的时候，就需要这个了
+# 一般用在 jupyter notebook 里，就是实时的输入输出，不需要额外使用dataloader
+preprocess:                     
+  vis_processor:
+    train:
+      name: "cloud_train"
+      max_size: 80000
+    eval:                       # eval 等价于 val + test
+      name: "cloud_test"
+      max_size: 80000
+  text_processor:
+    train:
+      name: "chinese_caption"   
+      max_words: 100
+    eval:
+      name: "chinese_caption"
+      max_words: 100
