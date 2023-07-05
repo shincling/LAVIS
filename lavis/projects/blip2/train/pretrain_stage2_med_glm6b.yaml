@@ -1,0 +1,92 @@
+ # Copyright (c) 2022, salesforce.com, inc.
+ # All rights reserved.
+ # SPDX-License-Identifier: BSD-3-Clause
+ # For full license text, see the LICENSE file in the repo root or https://opensource.org/licenses/BSD-3-Clause
+
+model:
+  arch: blip2_chatglm
+  model_type: pretrain_chatglm6b # lavis/models/blip2_models/blip2_llama.py
+  # model_type: pretrain_alpaca7b # lavis/models/blip2_models/blip2_llama.py
+  load_pretrained: False
+  # intialize stage 2 pretraining from stage 1 pretrained model
+  # pretrained: "https://storage.googleapis.com/sfr-vision-language-research/LAVIS/models/BLIP2/blip2_pretrained.pth"
+  # pretrained: "/data2/shij/codes/BLIP2/LAVIS/lavis/output/BLIP2/Pretrain_stage1/20230227023_ep20bs120/checkpoint_9.pth"
+  # pretrained: "/data2/shij/codes/BLIP2/LAVIS/lavis/output/BLIP2/Pretrain_stage1/20230227023_ep20bs120/checkpoint_19.pth"
+  # pretrained: "/data2/shij/codes/BLIP2/LAVIS/lavis/output/BLIP2/Pretrain_stage1/20230227025_ep30bs120/checkpoint_29.pth"
+  # pretrained: "/data2/shij/codes/BLIP2/LAVIS/lavis/output/BLIP2/Pretrain_stage2_t5/20230301122/checkpoint_149.pth" # T5 encoder 变成固定prompt
+
+  pretrained: "/data2/shij/codes/BLIP2/LAVIS/lavis/output/BLIP2/Pretrain_stage1/20230409090/checkpoint_399.pth" # Stage1 重新训练
+
+  # pure stage1 med pretrained 
+  # pretrained: "/data2/shij/codes/BLIP2/LAVIS/lavis/output/BLIP2/Pretrain_stage1/20230307025/checkpoint_49.pth"
+  # pretrained: "/data2/shij/codes/BLIP2/LAVIS/lavis/output/BLIP2/Pretrain_stage1/20230301151/checkpoint_499.pth" # Stage1 重新训练
+  freeze_vit: True
+  # freeze_vit: False
+
+
+datasets:
+  # coco_caption:
+  #   vis_processor:
+  #       train:
+  #         name: "blip2_image_train"
+  #         image_size: 224
+  #   text_processor:
+  #       train:
+          # name: "blip_caption"
+
+  med_caption:
+    vis_processor:
+        train:
+          name: "blip2_image_train"
+          image_size: 224
+    text_processor:
+        train:
+          name: "blip_caption"
+          max_words: 500
+    # build_info:
+    #     images:
+    #         storage: '/export/share/datasets/vision/coco/images/'          
+  # vg_caption: # name of the dataset builder
+  #   vis_processor:
+  #       train:
+  #         name: "blip_image_train"
+  #         image_size: 224
+  #   text_processor:
+  #       train:
+  #         name: "blip_caption"
+    # build_info:
+    #     images:
+    #         storage: '//export/share/datasets/vision/visual-genome/image/'
+
+run:
+  task: image_text_pretrain
+  # optimizer
+  lr_sched: "linear_warmup_cosine_lr"
+  init_lr: 2e-5
+  min_lr: 5e-6
+  warmup_lr: 1e-6
+
+  weight_decay: 0.05
+  max_epoch: 50
+  # batch_size_train: 16 # 16 for FlanT5-xxl
+  batch_size_train: 2 # 16 for FlanT5-xl with 3 layers open
+  # batch_size_train: 16 # 16 for FlanT5-xxl
+  # accum_grad_iters: 4
+  batch_size_eval: 64
+  num_workers: 4
+  warmup_steps: 500
+
+  seed: 42
+  output_dir: "output/BLIP2/Pretrain_stage2_chatglm"
+
+  amp: True
+  resume_ckpt_path: null
+
+  evaluate: False 
+  train_splits: ["train"]
+  # val_splits: ["val", "test"]
+
+  device: "cuda"
+  world_size: 1
+  dist_url: "env://"
+  distributed: True
