@@ -22,6 +22,7 @@ from lavis.models.base_model import BaseModel
 from lavis.models.blip2_models.Qformer import BertConfig, BertLMHeadModel
 from lavis.models.eva_vit import create_eva_vit_g
 from transformers import BertTokenizer
+from lavis.models.blip2_models.PointTransformer import PointTransformerV2
 
 
 class Blip2Base(BaseModel):
@@ -39,6 +40,10 @@ class Blip2Base(BaseModel):
         encoder_config.add_cross_attention = True
         encoder_config.cross_attention_freq = 2
         encoder_config.query_length = num_query_token
+
+        # Note(Jing): close the dropout to see whether it's the reason for the gap between .train() and .eval()
+        encoder_config.attention_probs_dropout_prob = 0.0
+        encoder_config.hidden_dropout_prob = 0.0
         Qformer = BertLMHeadModel.from_pretrained(
             "bert-base-uncased", config=encoder_config
         )                 
@@ -68,6 +73,40 @@ class Blip2Base(BaseModel):
         audio_encoder.freeze_feature_extractor()
         return audio_encoder, None
 
+    @classmethod
+    # def init_cloud_encoder(cls, model_name, max_cloud_size, drop_path_rate, use_grad_checkpoint, pretrained_model_path = None,):
+    def init_cloud_encoder(cls, model_name, pretrained_model_path = None,):
+        if (model_name == "point_transformer"):
+             cloud_encoder = PointTransformerV2(in_channels=6,
+                                            #  num_classes=20,
+                                             patch_embed_depth=1,
+                                             patch_embed_channels=48,
+                                             patch_embed_groups=6,
+                                             patch_embed_neighbours=8,
+                                             enc_depths=(2, 2, 6, 2),
+                                             enc_channels=(96, 192, 384, 512),
+                                             enc_groups=(12, 24, 48, 64),
+                                             enc_neighbours=(16, 16, 16, 16),
+                                            #  dec_depths=(1, 1, 1, 1),
+                                            #  dec_channels=(48, 96, 192, 384),
+                                            #  dec_groups=(6, 12, 24, 48),
+                                            #  dec_neighbours=(16, 16, 16, 16),
+                                             grid_sizes=(0.06, 0.15, 0.375, 0.9375),
+                                             attn_qkv_bias=True,
+                                             pe_multiplier=False,
+                                             pe_bias=True,
+                                             attn_drop_rate=0.,
+                                             drop_path_rate=0.3,
+                                             enable_checkpoint=False,
+                                             unpool_backend="map",
+                                             num_features=256,
+                                             checkpoint_path=pretrained_model_path,)
+        else:
+            raise KeyError("cloud encoder must be point_transformer")
+        # TODO: 这个要根据point transformer的特征维度相应修改
+        ln_cloud = LayerNorm(cloud_encoder.enc_channels[-1])
+        return cloud_encoder, ln_cloud
+
     def load_from_pretrained(self, url_or_filename):
         # import pdb; pdb.set_trace()
         if is_url(url_or_filename):
@@ -82,11 +121,32 @@ class Blip2Base(BaseModel):
             raise RuntimeError("checkpoint url or path is invalid")
 
         state_dict = checkpoint["model"]
+        # tmp_dict = torch.load("/data2/shij/llama/only_opt.pth", map_location="cpu")['model']
+        # lm_head_state_dict = {'opt_model.lm_head.weight' : state_dict["opt_model.lm_head.weight"][:130528]}
+        # state_dict.pop("opt_model.lm_head.weight")
 
+        # Note(Jing): 下面三行应该用，避免chatglm的参数被覆盖出现问题
+        for k in list(state_dict.keys()):
+            if k.startswith("opt_model."):
+                state_dict.pop(k)
+
+        # new_state_dict = {}
+        # for k,v in state_dict.items():
+        #     # if "chatglm" in k:
+        #         # new_state_dict[k.replace('chatglm_', "opt_")] = v
+        #     if "proj" in k:
+        #         new_state_dict[k.replace('chatglm_', "opt_")] = v
+        #     else:
+        #         new_state_dict[k] = v
+        # state_dict = new_state_dict
+
+        # state_dict.update(lm_head_state_dict)
+        logging.warn("Remove the LLM realted parameters to use the GLM orignal weights.")
+        
         msg = self.load_state_dict(state_dict, strict=False)
 
         logging.info("Missing keys {}".format(msg.missing_keys))
-        print("Missing keys {}".format(msg.missing_keys))
+        print("Missing keys {}".format(msg.missing_keys), len(msg.missing_keys))
         logging.info("load checkpoint from %s" % url_or_filename)
 
         return msg

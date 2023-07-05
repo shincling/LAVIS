@@ -90,6 +90,14 @@ prompts_list_music_cn = [
     "请描述这段音乐所呈现的场景和情境。",
 ]
 
+prompts_list_signal_cn = [
+    "生成给定信号的概况。",
+    "请描述给定信号。",
+    "描述下这段信号的情况。",
+    "告诉我这段信号的相关信息。"
+    "这段信号是什么？"
+]
+
 
 prompts_list_question = [
     "{}Answer:",

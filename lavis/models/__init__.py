@@ -33,6 +33,8 @@ from lavis.models.blip_models.blip_vqa import BlipVQA
 from lavis.models.blip2_models.blip2 import Blip2Base
 from lavis.models.blip2_models.blip2_opt import Blip2OPT
 from lavis.models.blip2_models.blip2_llama import Blip2LLaMA
+from lavis.models.blip2_models.blip2_chatglm import Blip2GLM
+from lavis.models.blip2_models.blip2_chatglm_all_modal import Blip2GLM_all
 from lavis.models.blip2_models.blip2_t5 import Blip2T5
 from lavis.models.blip2_models.blip2_qformer import Blip2Qformer
 from lavis.models.blip2_models.blip2_image_text_matching import Blip2ITM
@@ -81,7 +83,9 @@ __all__ = [
     "VisionTransformerEncoder",
     "XBertLMHeadDecoder",
     "GPTDialogue",
-    "Blip2LLaMA"
+    "Blip2LLaMA",
+    "Blip2GLM",
+    "Blip2GLM_all",
 ]
 
 
@@ -218,6 +222,41 @@ def load_model_and_preprocess(name, model_type, is_eval=False, device="cpu", pre
 
     return model.to(device), vis_processors, txt_processors
 
+def load_preprocess_only(name, model_type, is_eval=False, device="cpu", pre_model_path = None):
+    """
+    Load model and its related preprocessors.
+
+    List all available models and types in registry:
+    >>> from lavis.models import model_zoo
+    >>> print(model_zoo)
+
+    Args:
+        name (str): name of the model.
+        model_type (str): type of the model.
+        is_eval (bool): whether the model is in eval mode. Default: False.
+        device (str): device to use. Default: "cpu".
+
+    Returns:
+        model (torch.nn.Module): model.
+        vis_processors (dict): preprocessors for visual inputs.
+        txt_processors (dict): preprocessors for text inputs.
+    """
+    model_cls = registry.get_model_class(name)
+    # load preprocess
+    cfg = OmegaConf.load(model_cls.default_config_path(model_type))
+    if cfg is not None:
+        preprocess_cfg = cfg.preprocess
+
+        vis_processors, txt_processors = load_preprocess(preprocess_cfg)
+    else:
+        vis_processors, txt_processors = None, None
+        logging.info(
+            f"""No default preprocess for model {name} ({model_type}).
+                This can happen if the model is not finetuned on downstream datasets,
+                or it is not intended for direct use without finetuning.
+            """
+        )
+    return  vis_processors, txt_processors
 
 class ModelZoo:
     """
