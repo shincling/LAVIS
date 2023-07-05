@@ -23,6 +23,7 @@ from lavis.processors.gpt_processors import (
 )
 from lavis.processors.clip_processors import ClipImageTrainProcessor
 from lavis.processors.audio_processors import Blip2AudioTrainProcessor
+from lavis.processors.cloud_processors import CloudTrainProcessor, CloudTestProcessor
 
 from lavis.common.registry import registry
 
@@ -42,6 +43,9 @@ __all__ = [
     "GPTDialogueProcessor",
     # Audio
     "Blip2AudioTrainProcessor",
+    # Cloud
+    "CloudTrainProcessor",
+    "CloudTestProcessor",
 ]
 
 
