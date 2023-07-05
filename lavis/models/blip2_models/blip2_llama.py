@@ -26,7 +26,7 @@ USE_PROMPT = True
 PROMPT_PREFIX = (
     "以下是一个描述任务的指令，并配有一个提供详细上下文信息的输入。"
     "请写一个完成该指令的适当回复。\n\n"
-    "### 指令:\n{}\n\n### 输入: 图像-[image_xxx]\n\n### 回复:"
+    "### 指令:\n{}\n\n### 输入: 图像-[ ]\n\n### 回复:" # 这里insert的地方，一定要注意保证[ ]不要被tokenizer识别为一个token，这样长度才不会出问题，也才好插入query_emb
   )
     
 prompts_list_new = [
@@ -147,6 +147,7 @@ class Blip2LLaMA(Blip2Base):
         "pretrain_vicuna13b": "configs/models/blip2/blip2_pretrain_vicuna13b.yaml",
         "pretrain_zidong13b": "configs/models/blip2/blip2_pretrain_zidong13b.yaml",
         "pretrain_zidong13b-audio": "configs/models/blip2/blip2_pretrain_zidong13b-audio.yaml",
+        "pretrain_baichuan7b": "configs/models/blip2/blip2_pretrain_baichuan7b.yaml",
     }
 
     def __init__(
@@ -162,6 +163,7 @@ class Blip2LLaMA(Blip2Base):
         prompt="",
         max_txt_len=320, # Notice(Jing): the max_txt_len is 320 for llama-7b-hf
         modality="image",
+        freeze_qformer=False
     ):
         super().__init__()
 
@@ -171,6 +173,8 @@ class Blip2LLaMA(Blip2Base):
         self.llama_model = llama_model
         self.modality = modality
         logging.info(f"modality: {self.modality}")
+        freeze_qformer=True
+        logging.info(f"freeze_qformer: {freeze_qformer}")
         if modality == "image":
             self.visual_encoder, self.ln_vision = self.init_vision_encoder(
                 img_size, drop_path_rate, use_grad_checkpoint, vit_precision
@@ -208,10 +212,12 @@ class Blip2LLaMA(Blip2Base):
         # Notice(Jing): 呼应L47的注释， 暂时用本地的LLAMA模型，修改了bug了，之后可以考虑替换成Huggingface上的
         # llama_model = "/data/shij/llama/zidongv2/step1000_v2"
         logging.info("load LLAMA model:{}".format(llama_model))
-        self.llama_tokenizer = AutoTokenizer.from_pretrained(llama_model)
-        # self.llama_tokenizer = AutoTokenizer.from_pretrained('/data/shij/llama/zidongv2/step1000_v2')
-        # self.vit = AutoTokenizer.from_pretrained('/data/shij/llama/vicuna-13b')
-        self.llama_model = AutoModelForCausalLM.from_pretrained(llama_model)
+        # self.llama_tokenizer = AutoTokenizer.from_pretrained(llama_model)
+        # self.llama_model = AutoModelForCausalLM.from_pretrained(llama_model)
+
+        self.llama_tokenizer = AutoTokenizer.from_pretrained(llama_model, trust_remote_code=True)
+        self.llama_model = AutoModelForCausalLM.from_pretrained(llama_model, trust_remote_code=True)#.half()
+
         self.llama_tokenizer.pad_token_id = 0 # 这里不太规范，tokenizer的设置里没有，先加到这里吧
 
         # self.llama_tokenizer = AutoTokenizer.from_pretrained(llama_model, use_fast=False)
@@ -222,16 +228,21 @@ class Blip2LLaMA(Blip2Base):
             # 暂时先不用 bf16？llama没用
             param.data = param.data.bfloat16()
             param.requires_grad = False
-            continue 
             # if 'layers.31' in name : #or 'decoder.block.22.layer' in name: #or 'decoder.block.21.layer' in name:
                 # logging.info("open LLAMA model:{}".format(name))
                 # param.requires_grad = True
             # else:
                 # param.requires_grad = False
                 # param.data = param.data.bfloat16()
+        if freeze_qformer:
+            for name, param in self.Qformer.named_parameters():
+                param.requires_grad = False               
+            self.query_tokens.requires_grad = False
+            self.Qformer = self.Qformer.eval()
+            self.Qformer.train = disabled_train
+            logging.info("freeze Qformer") 
 
         self.eos_token_id = self.llama_tokenizer(
-            # "\n", add_special_tokens=False
             "</s>", add_special_tokens=False
         ).input_ids[0]
 
@@ -239,13 +250,45 @@ class Blip2LLaMA(Blip2Base):
             self.Qformer.config.hidden_size, self.llama_model.config.hidden_size
         )
 
-        # self.max_txt_len = max_txt_len
-        self.max_txt_len = 240
+        self.max_txt_len = max_txt_len
+        # self.max_txt_len = 240
         self.prompt = prompt
         prompt_tokens = self.llama_tokenizer(self.prompt, return_tensors="pt", add_bos_token=False, add_eos_token=False, max_length=self.max_txt_len)
         self.prompt_length = prompt_tokens.attention_mask.sum(1)
 
+        self.query_insert_mode = "before" # blip2默认的放到前面
+        # self.query_insert_mode = "middle" # 改成可以支持放到中间的
+
+    def prompt_wrap(self, img_embeds, atts_img):
+        """
+        wrap the image embedding with prompt
+        image embedding: [batch_size, query_len, hidden_size]
+        atts_img: [batch_size, query_len]
+        """
+        if not self.modality:
+            raise NotImplementedError("modality not specified")
+            return img_embeds, atts_img
+        else:
+            modal_token = self.modality.capitalize()
+            special_token = f"<{modal_token}Here>"
+            prompt = f"<{modal_token}><{modal_token}Here></{modal_token}>"
+
+            batch_size = img_embeds.shape[0]
+            p_before, p_after = prompt.split(special_token)
+            p_before_tokens = self.llama_tokenizer(
+                p_before, return_tensors="pt", add_special_tokens=False).to(img_embeds.device)
+            p_after_tokens = self.llama_tokenizer(
+                p_after, return_tensors="pt", add_special_tokens=False).to(img_embeds.device)
+            p_before_embeds = self.llama_model.model.embed_tokens(p_before_tokens.input_ids).expand(batch_size, -1, -1)
+            p_after_embeds = self.llama_model.model.embed_tokens(p_after_tokens.input_ids).expand(batch_size, -1, -1)
+            wrapped_img_embeds = torch.cat([p_before_embeds, img_embeds, p_after_embeds], dim=1)
+            wrapped_atts_img = atts_img[:, :1].expand(-1, wrapped_img_embeds.shape[1])
+            return wrapped_img_embeds, wrapped_atts_img
+        
+
     def forward(self, samples):
+        self.Qformer.bert.encoder.eval()
+
         if self.modality == "image":
             image = samples["image"]
             image_embeds = self.ln_vision(self.visual_encoder(image))
@@ -272,6 +315,7 @@ class Blip2LLaMA(Blip2Base):
 
         inputs_llama = self.llama_proj(query_output.last_hidden_state) # bs, len_query, dim
         atts_llama = torch.ones(inputs_llama.size()[:-1], dtype=torch.long).to(image.device)
+        inputs_llama, atts_llama = self.prompt_wrap(inputs_llama, atts_llama)
 
         self.llama_tokenizer.padding_side = "right"
 
@@ -302,12 +346,15 @@ class Blip2LLaMA(Blip2Base):
 
                 # 正常caption描述类文本
                 else: 
-                    # temp_prompt = random.choice(prompts_list)
-                    temp_prompt = PROMPT_PREFIX.format(random.choice(prompts_list))
+                    temp_prompt = random.choice(prompts_list)
+                    # temp_prompt = PROMPT_PREFIX.format(random.choice(prompts_list))
+                    # temp_prompt = PROMPT_PREFIX.format(prompts_list[0])
                     # temp_prompt = prompt_input.format(random.choice(prompts_list_new))
                     prompt_text.append(temp_prompt)
                     # given_text.append(temp_prompt + " " + sample_text)
-                    given_text.append(temp_prompt + sample_text)
+                    # given_text.append(temp_prompt + sample_text)
+                    temp_prompt = ""
+                    given_text.append(temp_prompt + "<s>" +  sample_text) # 变成 <Image>IMAGE_EMBEDDING<\Image> 请描述xxx<s>答案</s>的形式，参考了lora fine-tune的一些设置。
             text = [t+'</s>' for t in given_text]
 
         llama_tokens = self.llama_tokenizer(
@@ -329,19 +376,34 @@ class Blip2LLaMA(Blip2Base):
             targets[:, : self.prompt_length] = -100  # do not apply loss to the prompt
         if prompt_text is not None:
             # 这里专门来处理我自己定义的prompt
-            prompt_lens = self.llama_tokenizer(prompt_text, padding="longest", return_tensors="pt", add_bos_token=False).attention_mask.sum(1).tolist() # 
-            for idx, length in enumerate(prompt_lens):
+            prompts_tokens = self.llama_tokenizer(prompt_text, padding="longest", return_tensors="pt", add_bos_token=True)
+            prompt_lens = prompts_tokens.attention_mask.sum(1) # 
+            for idx, length in enumerate(prompt_lens.tolist()):
                 targets[idx, : length] = -100  # do not apply loss to the prompt
+
+            if self.query_insert_mode == "middle":
+                insert_idx = prompt_lens - 10 # [bs] 这个值是跟prompt的长度有关的，从后往前是固定的，所以-一个固定的值
+                assert prompts_tokens.input_ids[-1][insert_idx[-1]: insert_idx[-1]+2].tolist() == [29961, 4514] # 每一个batch验证一下insert_idx是否是 [ ]
+                split_idx = (insert_idx + 1, llama_tokens.input_ids.size(1) - insert_idx -1)  # 用来给prompt分割成两部分,以在中间插入query_emb
+                split_idx = torch.stack(split_idx).t() # [bs, 2]
 
         empty_targets = (
             torch.ones(atts_llama.size(), dtype=torch.long).to(image.device).fill_(-100)
-        )
-        targets = torch.cat([empty_targets, targets], dim=1)
-
-        # inputs_embeds = self.llama_model.model.decoder.embed_tokens(llama_tokens.input_ids) # 这里可能会出问题，调试的时候看一下
+        ) # (bs, query_length) 为query_emb添加空target
+        targets = torch.cat([empty_targets, targets], dim=1) # 不论是before还是middle，总的添加的长度是不变的，所以直接cat
+        attention_mask = torch.cat([atts_llama, llama_tokens.attention_mask], dim=1) # ditto
         inputs_embeds = self.llama_model.model.embed_tokens(llama_tokens.input_ids) # 看了源码，直接是embed_tokens就可以
-        inputs_embeds = torch.cat([inputs_llama, inputs_embeds], dim=1)
-        attention_mask = torch.cat([atts_llama, llama_tokens.attention_mask], dim=1)
+
+        if self.query_insert_mode == "before":
+            inputs_embeds = torch.cat([inputs_llama, inputs_embeds], dim=1)
+
+        elif self.query_insert_mode == "middle":
+            embeds_list = []
+            for idx, in_index in enumerate(insert_idx):
+                part1, part2 = inputs_embeds[idx].split((split_idx[idx].tolist()), dim=0) # divide into two parts
+                new_tensor = torch.cat([part1, inputs_llama[idx], part2], dim=0) # insert query_emb
+                embeds_list.append(new_tensor)
+            inputs_embeds = torch.stack(embeds_list, dim=0)
 
         outputs = self.llama_model(
             inputs_embeds=inputs_embeds,
@@ -350,15 +412,17 @@ class Blip2LLaMA(Blip2Base):
             labels=targets,
         )
 
-        if random.random() < 0.1:
+        if 1 and random.random() < 0.05:
             print("*"*20)
             print("tgt:", samples["text_input"][0], len(samples["text_input"][0]))
-            print("Pred:", self.llama_tokenizer.decode(outputs.logits[0][self.prompt_length[0]:].argmax(1)))
+            print("Pred:", self.llama_tokenizer.decode(outputs.logits[0].argmax(1)))
             print("tgt:", text[0], len(text[0]))
-            print("Pred:", self.llama_tokenizer.decode(outputs.logits[0][32:].argmax(1)))
+            if self.query_insert_mode == "before":
+                print("Pred:", self.llama_tokenizer.decode(outputs.logits[0][32:].argmax(1)))
+            elif self.query_insert_mode == "middle":
+                print("Pred:", self.llama_tokenizer.decode(outputs.logits[0][split_idx[0][0]+32+8:].argmax(1)))
 
         loss = outputs.loss
-
         return {"loss": loss}
 
     @torch.no_grad()
@@ -391,6 +455,7 @@ class Blip2LLaMA(Blip2Base):
         Returns:
             captions (list): A list of strings of length batch_size * num_captions.
         """
+        self.Qformer.bert.encoder.train()
         image = samples["image"]
         with torch.cuda.amp.autocast(
             enabled=(self.device != torch.device("cpu"))
@@ -410,6 +475,7 @@ class Blip2LLaMA(Blip2Base):
 
             inputs_llama = self.llama_proj(query_output.last_hidden_state) # [1,32,4096]
             atts_llama = torch.ones(inputs_llama.size()[:-1], dtype=torch.long).to(image.device)
+            inputs_llama, atts_llama = self.prompt_wrap(inputs_llama, atts_llama)
 
             if "prompt" in samples.keys():
                 prompt = samples["prompt"]
@@ -427,6 +493,7 @@ class Blip2LLaMA(Blip2Base):
             # """
             
             print("Prompt:", prompt)
+            raw_prompt = prompt
 
             prompt = [prompt] * image.size(0)
 
@@ -442,8 +509,29 @@ class Blip2LLaMA(Blip2Base):
 
             device_type = "cuda" if "cuda" in str(self.device) else "cpu"
             with torch.amp.autocast(device_type=device_type, dtype=torch.bfloat16):
-                inputs_embeds = self.llama_model.model.embed_tokens(llama_tokens.input_ids)
-                inputs_embeds = torch.cat([inputs_llama, inputs_embeds], dim=1) # [1,37.4096]
+                if self.query_insert_mode == "before":
+                    inputs_embeds = self.llama_model.model.embed_tokens(llama_tokens.input_ids)
+                    inputs_embeds = torch.cat([inputs_llama, inputs_embeds], dim=1)
+
+                elif self.query_insert_mode == "middle":
+                    prompt = PROMPT_PREFIX.format(raw_prompt)
+                    prompt = [prompt] * image.size(0)
+                    prompts_tokens = self.llama_tokenizer(prompt, padding="longest", return_tensors="pt", add_bos_token=True).to(image.device)
+                    prompt_lens = prompts_tokens.attention_mask.sum(1) # 
+
+                    insert_idx = prompt_lens - 10 # [bs] 这个值是跟prompt的长度有关的，从后往前是固定的，所以-一个固定的值
+                    assert prompts_tokens.input_ids[-1][insert_idx[-1]: insert_idx[-1]+2].tolist() == [29961, 4514] # 每一个batch验证一下insert_idx是否是 [ ]
+                    split_idx = (insert_idx + 1, prompts_tokens.input_ids.size(1) - insert_idx -1)  # 用来给prompt分割成两部分,以在中间插入query_emb
+                    split_idx = torch.stack(split_idx).t() # [bs, 2]
+
+                    inputs_embeds = self.llama_model.model.embed_tokens(prompts_tokens.input_ids)
+                    embeds_list = []
+                    for idx, in_index in enumerate(insert_idx):
+                        part1, part2 = inputs_embeds[idx].split((split_idx[idx].tolist()), dim=0) # divide into two parts
+                        new_tensor = torch.cat([part1, inputs_llama[idx], part2], dim=0) # insert query_emb
+                        embeds_list.append(new_tensor)
+                    inputs_embeds = torch.stack(embeds_list, dim=0)
+                    attention_mask = torch.cat([atts_llama, prompts_tokens.attention_mask], dim=1) # [1,32+5]
 
             outputs = self.llama_model.generate(
                 # input_ids=input_ids,
@@ -463,7 +551,6 @@ class Blip2LLaMA(Blip2Base):
                 early_stopping=early_stopping,
             )
 
-            # import pdb; pdb.set_trace()
             # Todo(jing): 是否加入并不一定的，只给Inputs_embeds的时候，输出不返回prompt的
             # prompt_length = llama_tokens.input_ids.shape[1]
             # output_text = self.llama_tokenizer.batch_decode(outputs[:, prompt_length:], skip_special_tokens=True)
@@ -600,7 +687,6 @@ class Blip2LLaMA(Blip2Base):
                 inputs_embeds = self.llama_model.model.embed_tokens(llama_tokens.input_ids)
                 inputs_embeds = torch.cat([inputs_llama, inputs_embeds], dim=1)
 
-            # import pdb; pdb.set_trace()
             outputs = self.llama_model.generate(
                 # input_ids=input_ids,
                 # query_embeds=query_embeds,
@@ -619,7 +705,6 @@ class Blip2LLaMA(Blip2Base):
                 early_stopping=early_stopping,
             )
 
-            # import pdb; pdb.set_trace()
             # Todo(jing): 是否加入并不一定的，只给Inputs_embeds的时候，输出不返回prompt的
             # prompt_length = llama_tokens.input_ids.shape[1]
             # output_text = self.llama_tokenizer.batch_decode(outputs[:, prompt_length:], skip_special_tokens=True)
