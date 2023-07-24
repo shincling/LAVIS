@@ -154,3 +154,5 @@ debug*/
 *.gz
 
 cache/
+music_samples/
+test_inputs/
