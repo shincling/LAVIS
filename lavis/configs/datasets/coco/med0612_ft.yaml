@@ -17,17 +17,18 @@ datasets:
           # md5: aa31ac474cf6250ebb81d18348a07ed8
           # storage: coco/annotations/multidial_output_train_prefix1w_tail1w.json
           # storage: med_cap_instruction/annotations/med_image_sjwk_cap_ins_13k_v1.json
-          storage: med_cap_instruction/annotations/med_image_sjwk_xinnei_cap_ins_12k_v3.json
-        val:
-          url: https://storage.googleapis.com/sfr-vision-language-research/datasets/coco_karpathy_val.json
-          # md5: b273847456ef5580e33713b1f7de52a0
-          # storage: med_cap_instruction/annotations/med_image_sjwk_cap_ins_13k_v1_valid.json
-          storage: med_cap_instruction/annotations/med_image_sjwk_xinnei_cap_ins_12k_v3_valid.json
-        test:
-          url: https://storage.googleapis.com/sfr-vision-language-research/datasets/coco_karpathy_test.json
-          # md5: 3ff34b0ef2db02d01c37399f6a2a6cd1
-          # storage: med_cap_instruction/annotations/med_image_sjwk_cap_ins_13k_v1_valid.json
-          storage: med_cap_instruction/annotations/med_image_sjwk_xinnei_cap_ins_12k_v3_valid.json
+          storage: med_cap_instruction/annotations/med_image_sjwk_xinnei_cap_12k_v3.json
+          # storage: med_cap_instruction/annotations/med_image_sjwk_cap_12k_v3.json
+        # val:
+        #   url: https://storage.googleapis.com/sfr-vision-language-research/datasets/coco_karpathy_val.json
+        #   # md5: b273847456ef5580e33713b1f7de52a0
+        #   # storage: med_cap_instruction/annotations/med_image_sjwk_cap_ins_13k_v1_valid.json
+        #   storage: med_cap_instruction/annotations/med_image_sjwk_xinnei_cap_ins_12k_v3_valid.json
+        # test:
+        #   url: https://storage.googleapis.com/sfr-vision-language-research/datasets/coco_karpathy_test.json
+        #   # md5: 3ff34b0ef2db02d01c37399f6a2a6cd1
+        #   # storage: med_cap_instruction/annotations/med_image_sjwk_cap_ins_13k_v1_valid.json
+        #   storage: med_cap_instruction/annotations/med_image_sjwk_xinnei_cap_ins_12k_v3_valid.json
 
       images:
         storage: med_cap_instruction/

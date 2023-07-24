@@ -14,8 +14,11 @@ datasets:
       annotations:
         train:
           url: "/data2/shij/data/Med2/raw_data/train_texts.json"
-          # storage: wukong/annotations/caption_wukong_1000w_v0.json
-          storage: wukong/annotations/caption_wukong_valid.json
+          storage: wukong/annotations/caption_wukong_1000w_v0.json
+          # storage: wukong/annotations/caption_wukong_v0_300w.json
+          #storage: wukong/annotations/caption_wukong_v1_5w.json
+          # storage: wukong/annotations/caption_wukong_v1_1000.json
+          # storage: wukong/annotations/caption_wukong_valid.json
         val:
           url: "/data2/shij/data/Med2/raw_data/valid_texts.json"
           storage: wukong/annotations/caption_wukong_valid.json

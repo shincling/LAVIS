@@ -137,18 +137,30 @@ if modal_type == 'music':
         )
 
 if modal_type =="image":
-    model, vis_processors, _ = load_model_and_preprocess(name="blip2_chatglm", model_type="pretrain_chatglm6b",\
-                                                          is_eval=True, device=device, pre_model_path="/data2/shij/lavis_glm/lavis/checkpoints/checkpoint_4.pth")
-    # model, vis_processors, _ = load_model_and_preprocess(
+    # model, vis_processors, _ = load_model_and_preprocess(name="blip2_chatglm", model_type="pretrain_chatglm6b",\
+                                                        #   is_eval=True, device=device, pre_model_path="/data2/shij/lavis_glm/lavis/checkpoints/checkpoint_4.pth")
+    model, vis_processors, _ = load_model_and_preprocess(
     # # 通用Image與所裏LLM
     # # name="blip2_llama", model_type="pretrain_zidong13b", is_eval=True, device=device, pre_model_path="/data/shij/codes/BLIP2/LAVIS/lavis/output/BLIP2/Pretrain_stage2_wukong/20230427144/checkpoint_8.pth"
     # # name="blip2_llama", model_type="pretrain_zidong13b", is_eval=True, device=device, pre_model_path="/data/shij/codes/BLIP2/LAVIS/lavis/output/BLIP2/Pretrain_stage2_wukong/20230505181/checkpoint_29.pth"
 
     # # Baichuan-7B image
     # # name="blip2_llama", model_type="pretrain_baichuan7b", is_eval=True, device=device, pre_model_path="/data/shij/codes/BLIP2/LAVIS/lavis/output/BLIP2/Pretrain_stage2_image_baichuan7b/20230629100/checkpoint_0.pth"
-    # # name="blip2_llama", model_type="pretrain_baichuan7b", is_eval=True, device=device, pre_model_path="/data/shij/codes/BLIP2/LAVIS/lavis/output/BLIP2/Pretrain_stage2_image_baichuan7b/20230629181/checkpoint_0.pth"
+    # name="blip2_llama", model_type="pretrain_baichuan7b", is_eval=True, device=device, pre_model_path="/data/shij/codes/BLIP2/LAVIS/lavis/output/BLIP2/Pretrain_stage2_image_baichuan7b/20230629181/checkpoint_1.pth"
     # # name="blip2_llama", model_type="pretrain_baichuan7b", is_eval=True, device=device, pre_model_path="/data/shij/codes/BLIP2/LAVIS/lavis/output/BLIP2/Pretrain_stage2_image_baichuan7b/20230630222/checkpoint_0.pth"
-    # name="blip2_llama", model_type="pretrain_baichuan7b", is_eval=True, device=device, pre_model_path="/data/shij/codes/BLIP2/LAVIS/lavis/output/BLIP2/Pretrain_stage2_image_baichuan7b/20230703164/checkpoint_0.pth"
+    # name="blip2_llama", model_type="pretrain_baichuan7b", is_eval=True, device=device, pre_model_path="/data/shij/codes/BLIP2/LAVIS/lavis/output/BLIP2/Pretrain_stage2_image_baichuan7b/20230703164/checkpoint_14.pth"
+    # name="blip2_llama", model_type="pretrain_baichuan7b", is_eval=True, device=device, pre_model_path="/data/shij/codes/BLIP2/LAVIS/lavis/output/BLIP2/Pretrain_stage2_image_baichuan7b/20230713234/checkpoint_1.pth"
+    # name="blip2_llama", model_type="pretrain_baichuan7b", is_eval=True, device=device, pre_model_path="/data/shij/codes/BLIP2/LAVIS/lavis/output/BLIP2/Pretrain_stage2_image_baichuan7b/20230720153/checkpoint_5.pth"
+    # name="blip2_llama", model_type="pretrain_baichuan7b", is_eval=True, device=device, pre_model_path="/data/shij/codes/BLIP2/LAVIS/lavis/output/BLIP2/Pretrain_stage2_image_baichuan7b/20230720163/checkpoint_1.pth"
+    # name="blip2_llama", model_type="pretrain_baichuan7b", is_eval=True, device=device, pre_model_path="/data/shij/codes/BLIP2/LAVIS/lavis/output/BLIP2/Pretrain_stage2_image_baichuan7b/20230721120/checkpoint_2.pth"
+    # name="blip2_llama", model_type="pretrain_baichuan7b", is_eval=True, device=device, pre_model_path="/data/shij/codes/BLIP2/LAVIS/lavis/output/BLIP2/Pretrain_stage2_image_baichuan7b/20230721164/checkpoint_2.pth"
+    name="blip2_llama", model_type="pretrain_baichuan7b", is_eval=True, device=device, pre_model_path="/data/shij/codes/BLIP2/LAVIS/lavis/output/BLIP2/Pretrain_stage2_image_baichuan7b/20230721180/checkpoint_1.pth"
+
+    # name="blip2_llama", model_type="pretrain_baichuan13b", is_eval=True, device=device, pre_model_path="/data/shij/codes/BLIP2/LAVIS/lavis/output/BLIP2/Pretrain_stage2_image_baichuan13b/20230712155/checkpoint_1.pth"
+    # name="blip2_llama", model_type="pretrain_baichuan13b", is_eval=True, device=device, pre_model_path="/data/shij/codes/BLIP2/LAVIS/lavis/output/BLIP2/Pretrain_stage2_image_baichuan13b/20230713145/checkpoint_0.pth"
+    # name="blip2_llama", model_type="pretrain_baichuan13b", is_eval=True, device=device, pre_model_path="/data/shij/codes/BLIP2/LAVIS/lavis/output/BLIP2/Pretrain_stage2_image_baichuan13b/20230716103/checkpoint_5.pth"
+    # name="blip2_llama", model_type="pretrain_baichuan13b", is_eval=True, device=device, pre_model_path="/data/shij/codes/BLIP2/LAVIS/lavis/output/BLIP2/Pretrain_stage2_image_baichuan13b/20230718180/checkpoint_3.pth"
+    )
 
 if modal_type =="image_med":
     model, vis_processors, _ = load_model_and_preprocess(name="blip2_chatglm", model_type="pretrain_chatglm6b_image_dialog_ft",\
@@ -213,15 +225,19 @@ def notes_list(is_trans=False):
         input_text_en = requests.post(translation_api_cn2en_genel, data={'text': text}).json()['Data']['Translated']
         input_text_en = input_text_en.replace("Problem:", "Question:").strip()
         prompt = input_text_en if is_trans else text
+        if isinstance(prompt, list):
+            assert isinstance(prompt[-1], str), "text should be a string"
+            prompt = prompt[-1]
+
         if prefix_str:
             prompt = prefix_str.format(prompt)
         # response = model.generate({"image": given_image, "prompt": prompt}, max_length=300, repetition_penalty=2.0, temp_prompt="skip", early_stopping=False)
         model.train()
         # response = model.generate({"image": given_image, "prompt": prompt}, max_length=320, repetition_penalty=2.5, temp_prompt="skip", early_stopping=True)
-        response = model.generate({"image": given_image, "prompt": prompt}, max_length=320, repetition_penalty=2.5, temp_prompt="skip", early_stopping=True)
+        response = model.generate({"image": given_image, "prompt": prompt}, max_length=320, repetition_penalty=1.1, temperature=0.3, temp_prompt="skip", early_stopping=False)
         response = response[0]
 
-        print("Response: ", response)
+        print("Response: ", response, len(response))
         if "</s>" in response:
             response = response.replace("</s>","")
             # response = response.split("</s>")[0]
@@ -260,9 +276,13 @@ def image_infer():
         given_image = base64_pil(given_image).convert("RGB")
         given_image = vis_processors["eval"](given_image).unsqueeze(0).to(device)
 
-        prompt = text
-        response = model.generate({"image": given_image, "prompt": prompt}, max_length=2048, repetition_penalty=2.0, temp_prompt="skip", early_stopping=False)
-        # response = model.generate({"image": given_image, "prompt": prompt}, max_length=320, repetition_penalty=2.5, temp_prompt="skip", early_stopping=True)
+        prompt = text 
+        # prompt = "<reserved_102>" + text + "<reserved_103>" 
+        # prompt = "<reserved_102>" + text + "<reserved_103>" 
+        prompt = text + "<reserved_103>" 
+        # prompt = text + "<s>" 
+        # response = model.generate({"image": given_image, "prompt": prompt}, max_length=2048, repetition_penalty=2.0, temp_prompt="skip", early_stopping=False)
+        response = model.generate({"image": given_image, "prompt": prompt}, max_length=320, repetition_penalty=2.5, temp_prompt="skip", early_stopping=True)
         response = response[0]
 
         print("Response: ", response)
@@ -482,7 +502,8 @@ if __name__ == "__main__":
     if modal_type == "image_air":
         app.run(debug=False, host='0.0.0.0', port=7121)
     if modal_type == "image":
-        app.run(debug=False, host='0.0.0.0', port=7125)
+        # app.run(debug=False, host='0.0.0.0', port=7125)
+        app.run(debug=False, host='0.0.0.0', port=7126)
     if modal_type == "music":
         app.run(debug=False, host='0.0.0.0', port=7126)
     if modal_type == "speech":
