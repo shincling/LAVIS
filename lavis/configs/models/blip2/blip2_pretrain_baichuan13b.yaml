@@ -25,11 +25,12 @@ model:
   # opt_model: "facebook/opt-2.7b"
 
   # llama_model: "decapoda-research/llama-7b-hf"
-  llama_model: "/data/shij/llama/zidongv2/step1000_v3" # 上面的本地版，修改了Llama的那个bug
+  # llama_model: "/data/shij/llama/baichuan-7B"
+  llama_model: "/data/shij/llama/baichuan-13B/Baichuan-13B-Chat"
 
   # generation configs
   prompt: ""
-  max_txt_len: 256
+  max_txt_len: 128
 
 
 preprocess:
@@ -43,7 +44,7 @@ preprocess:
     text_processor:
         train:
           name: "blip_caption"
-          max_words: 320
+          max_words: 128
         eval:
           name: "blip_caption"
-          max_words: 320
+          max_words: 128
